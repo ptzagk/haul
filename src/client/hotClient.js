@@ -1,3 +1,8 @@
+/**
+ * Copyright 2017-present, Callstack.
+ * All rights reserved.
+ */
+
 /* @flow */
 /* global WebSocket, MessageEvent */
 
@@ -46,12 +51,12 @@ function processPayload(payload, { logger, reporter, ...opts }) {
   switch (payload.action) {
     case 'building':
       logger.log(
-        `[HMR] bundle ${payload.name ? `'${payload.name}' ` : ''}rebuilding`,
+        `[HMR] Bundle ${payload.name ? `'${payload.name}' ` : ''}rebuilding`,
       );
       break;
     case 'built':
       logger.log(
-        `[HMR] bundle ${payload.name ? `'${payload.name}' ` : ''}rebuilt in ${payload.time}ms`,
+        `[HMR] Bundle ${payload.name ? `'${payload.name}' ` : ''}rebuilt in ${payload.time}ms`,
       );
     // fall through
     case 'sync':

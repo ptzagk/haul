@@ -1,3 +1,8 @@
+/**
+ * Copyright 2017-present, Callstack.
+ * All rights reserved.
+ */
+
 /* @flow */
 
 // eslint-disable-next-line import/no-extraneous-dependencies
@@ -5,7 +10,7 @@ import React, { Component } from 'client-react';
 import deepForceUpdate from 'react-deep-force-update';
 
 /**
- * Original code was from https://github.com/gaearon/react-hot-loader/ by Dan Abramov
+ * Original code was taken from https://github.com/gaearon/react-hot-loader/ by Dan Abramov
  */
 
 let instance;
@@ -20,13 +25,9 @@ export default function AppContainer(rootFactory: Function) {
       // $FlowFixMe
       if (typeof __REACT_HOT_LOADER__ === 'undefined') {
         console.error(
-          'React Hot Loader: It appears that "react-hot-loader/patch" ' +
+          'Haul HMR: It appears that "haul-hmr/patch" ' +
             'did not run immediately before the app started. Make sure that it ' +
-            'runs before any other code. For example, if you use Webpack, ' +
-            'you can add "react-hot-loader/patch" as the very first item to the ' +
-            '"entry" array in its config. Alternatively, you can add ' +
-            'require("react-hot-loader/patch") as the very first line ' +
-            'in the application code, before any other imports.',
+            'runs before any other code.',
         );
       }
     }
@@ -46,6 +47,7 @@ export default function AppContainer(rootFactory: Function) {
     // In 15.0, it only catches errors on initial mount.
     // Later it will work for updates as well:
     // https://github.com/facebook/react/pull/6020
+    // eslint-disable-next-line camelcase
     unstable_handleError(error: Object) {
       // eslint-disable-line camelcase
       this.setState({

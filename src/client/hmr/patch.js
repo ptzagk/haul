@@ -2,11 +2,17 @@
  * Original code taken from https://github.com/gaearon/react-hot-loader/ by Dan Abramov
  */
 
+/* @flow */
+// @TODO: add more flow types
+
 // eslint-disable-next-line import/no-extraneous-dependencies
 import React from 'client-react';
 import createProxy from 'react-proxy';
 
 class ComponentMap {
+  wm: WeakMap<Function, *>;
+  slots: Object;
+
   constructor(useWeakMap) {
     if (useWeakMap) {
       this.wm = new WeakMap();
@@ -132,9 +138,9 @@ function resolveType(type) {
   hasCreatedElementsByType.set(type, true);
 
   // When available, give proxy class to React instead of the real class.
-  const id = idsByType.get(type);
+  const id: any = idsByType.get(type);
   // Ignore components from react-native
-  if (!id || /react-native/.test(id)) {
+  if (!id || (typeof id === 'string' && /react-native/.test(id))) {
     return type;
   }
 
