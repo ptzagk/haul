@@ -1,127 +1,117 @@
-/* global __resourceQuery __webpack_public_path__ */
+/* @flow */
+/* global WebSocket, MessageEvent */
 
-// @TODO: refactor & cleanup
-// @TODO: whitelist for transpilation by babel
+const processUpdate = require('webpack-hot-middleware/process-update');
 
-const options = {
-  path: '/__webpack_hmr',
-  timeout: 20 * 1000,
-  overlay: true,
-  reload: false,
-  log: true,
-  warn: true,
-  name: '',
-};
-if (__resourceQuery) {
-  const querystring = require('querystring');
-  const overrides = querystring.parse(__resourceQuery.slice(1));
-  if (overrides.path) options.path = overrides.path;
-  if (overrides.timeout) options.timeout = overrides.timeout;
-  if (overrides.overlay) options.overlay = overrides.overlay !== 'false';
-  if (overrides.reload) options.reload = overrides.reload !== 'false';
-  if (overrides.noInfo && overrides.noInfo !== 'false') {
-    options.log = false;
+function normalizeOptions({ path, quiet, overlay, reload, name }) {
+  const shouldLog = !quiet;
+  const options = {
+    path,
+    overlay: true,
+    reload: false,
+    name: '',
+    logger: {
+      shouldLog,
+      log(...args) {
+        if (shouldLog) {
+          console.log(...args);
+        }
+      },
+      warn(...args) {
+        if (shouldLog) {
+          console.warn(...args);
+        }
+      },
+      error(...args) {
+        if (shouldLog) {
+          console.error(...args);
+        }
+      },
+    },
+  };
+
+  if (overlay) {
+    options.overlay = overlay !== 'false';
   }
-  if (overrides.name) {
-    options.name = overrides.name;
+  if (reload) {
+    options.reload = reload !== 'false';
   }
-  if (overrides.quiet && overrides.quiet !== 'false') {
-    options.log = false;
-    options.warn = false;
+  if (name) {
+    options.name = name;
   }
-  if (overrides.dynamicPublicPath) {
-    // eslint-disable-next-line
-    options.path = __webpack_public_path__ + options.path;
+  return options;
+}
+
+function processPayload(payload, { logger, reporter, ...opts }) {
+  switch (payload.action) {
+    case 'building':
+      logger.log(
+        `[HMR] bundle ${payload.name ? `'${payload.name}' ` : ''}rebuilding`,
+      );
+      break;
+    case 'built':
+      logger.log(
+        `[HMR] bundle ${payload.name ? `'${payload.name}' ` : ''}rebuilt in ${payload.time}ms`,
+      );
+    // fall through
+    case 'sync':
+      if (payload.name && opts.name && payload.name !== opts.name) {
+        return;
+      }
+
+      if (payload.errors.length > 0 && reporter) {
+        reporter.problems('errors', payload);
+      } else if (payload.warnings.length > 0 && reporter) {
+        reporter.problems('warnings', payload);
+      } else if (reporter) {
+        reporter.cleanProblemsCache();
+        reporter.success();
+      }
+
+      processUpdate(payload.hash, payload.modules, {
+        ...opts,
+        log: logger.shouldLog,
+        warn: logger.shouldLog,
+        error: logger.shouldLog,
+      });
+      break;
+    default:
+      logger.warn(`[HMR] Invalid action ${payload.action}`);
   }
 }
 
-connect();
+/**
+ * Custom HMR client with WebSocket support instead of EventSource as `webpack-hot-middleware`
+ */
+module.exports = function connect(options: Object) {
+  const { logger, ...opts } = normalizeOptions(options);
+  const ws = new WebSocket(opts.path);
 
-// /*
-// function EventSourceWrapper() {
-//   var source;
-//   var lastActivity = new Date();
-//   var listeners = [];
-
-//   init();
-//   var timer = setInterval(function() {
-//     if ((new Date() - lastActivity) > options.timeout) {
-//       handleDisconnect();
-//     }
-//   }, options.timeout / 2);
-
-//   function init() {
-//     source = new window.EventSource(options.path);
-//     source.onopen = handleOnline;
-//     source.onerror = handleDisconnect;
-//     source.onmessage = handleMessage;
-//   }
-
-//   function handleOnline() {
-//     if (options.log) console.log("[HMR] connected");
-//     lastActivity = new Date();
-//   }
-
-//   function handleMessage(event) {
-//     lastActivity = new Date();
-//     for (var i = 0; i < listeners.length; i++) {
-//       listeners[i](event);
-//     }
-//   }
-
-//   function handleDisconnect() {
-//     clearInterval(timer);
-//     source.close();
-//     setTimeout(init, options.timeout);
-//   }
-
-//   return {
-//     addMessageListener: function(fn) {
-//       listeners.push(fn);
-//     }
-//   };
-// }
-
-// function getEventSourceWrapper() {
-//   if (!window.__whmEventSourceWrapper) {
-//     window.__whmEventSourceWrapper = {};
-//   }
-//   if (!window.__whmEventSourceWrapper[options.path]) {
-//     // cache the wrapper for other entries loaded on
-//     // the same page with the same options.path
-//     window.__whmEventSourceWrapper[options.path] = EventSourceWrapper();
-//   }
-//   return window.__whmEventSourceWrapper[options.path];
-// }*/
-
-function connect() {
-  // eslint-disable-next-line
-  const ws = new WebSocket(options.path);
-  ws.onopen = function() {
-    console.log('HMR client connected');
+  ws.onopen = () => {
+    logger.log('[HMR] Client connected');
   };
-  ws.onerror = function(error) {
-    console.error(
-      `HMR client could not connect to the server ${options.path}`,
+
+  ws.onerror = error => {
+    logger.error(
+      `[HMR] Client could not connect to the server ${opts.path}`,
       error,
     );
   };
-  ws.onmessage = handleMessage;
 
-  function handleMessage(message) {
-    console.log(message);
+  ws.onmessage = (message: MessageEvent) => {
+    if (typeof message.data !== 'string') {
+      throw new Error(`[HMR] Data from websocker#onmessage must be a string`);
+    }
     const payload = JSON.parse(message.data);
     try {
-      processMessage(payload);
+      processPayload(payload, { logger, ...opts });
     } catch (error) {
-      if (options.warn) {
-        console.warn(`Invalid HMR message: ${message}`, error);
-      }
+      logger.warn(`[HMR] Invalid message: ${payload}`, error);
     }
-  }
-}
+  };
+};
 
-let reporter;
+// @TODO check if the stuff below is needed
 // // the reporter needs to be a singleton on the page
 // // in case the client is being used by multiple bundles
 // // we only want to report once.
@@ -193,66 +183,3 @@ let reporter;
 //     }
 //   };
 // }*/
-
-const processUpdate = require('webpack-hot-middleware/process-update');
-
-let customHandler;
-let subscribeAllHandler;
-function processMessage(payload) {
-  switch (payload.action) {
-    case 'building':
-      if (options.log) {
-        console.log(
-          `[HMR] bundle ${payload.name ? `'${payload.name}' ` : ''}rebuilding`,
-        );
-      }
-      break;
-    case 'built':
-      if (options.log) {
-        console.log(
-          `[HMR] bundle ${payload.name ? `'${payload.name}' ` : ''}rebuilt in ${payload.time}ms`,
-        );
-      }
-    // fall through
-    case 'sync':
-      if (payload.name && options.name && payload.name !== options.name) {
-        return;
-      }
-      if (payload.errors.length > 0) {
-        if (reporter) reporter.problems('errors', payload);
-      } else {
-        if (reporter) {
-          if (payload.warnings.length > 0) {
-            reporter.problems('warnings', payload);
-          } else {
-            reporter.cleanProblemsCache();
-          }
-          reporter.success();
-        }
-        processUpdate(payload.hash, payload.modules, options);
-      }
-      break;
-    default:
-      if (customHandler) {
-        customHandler(payload);
-      }
-  }
-
-  if (subscribeAllHandler) {
-    subscribeAllHandler(payload);
-  }
-}
-
-if (module) {
-  module.exports = {
-    subscribeAll: function subscribeAll(handler) {
-      subscribeAllHandler = handler;
-    },
-    subscribe: function subscribe(handler) {
-      customHandler = handler;
-    },
-    useCustomOverlay: function useCustomOverlay(customOverlay) {
-      if (reporter) reporter.useCustomOverlay(customOverlay);
-    },
-  };
-}

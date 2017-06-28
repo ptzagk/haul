@@ -56,7 +56,6 @@ const getDefaultConfig = (
      * It is also needed to setup the required environment
      */
     require.resolve('./polyfillEnvironment.js'),
-    `${require.resolve('../client/hotClient.js')}?path=http://localhost:${port}/hot&overlay=false`,
   ],
   /**
    * `cheap-module-source-map` is faster than `source-map`,
@@ -116,7 +115,10 @@ const getDefaultConfig = (
        * Various libraries like React rely on `process.env.NODE_ENV`
        * to distinguish between production and development
        */
-      'process.env': { NODE_ENV: dev ? '"development"' : '"production"' },
+      'process.env': {
+        NODE_ENV: dev ? '"development"' : '"production"',
+        DEV_SERVER_ORIGIN: JSON.stringify(`http://localhost:${port}`),
+      },
       __DEV__: dev,
     }),
     new webpack.LoaderOptionsPlugin({
@@ -210,6 +212,9 @@ const getDefaultConfig = (
     mainFields: ['react-native', 'browser', 'main'],
     extensions: [`.${platform}.js`, '.native.js', '.js'],
   },
+  /**
+   * Set target to webworker as it's closer to RN environment than `web`.
+   */
   target: 'webworker',
 });
 
