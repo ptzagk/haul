@@ -179,6 +179,12 @@ const getDefaultConfig = (
       : [],
   ),
   resolve: {
+    alias: {
+      /**
+       * Resolve path to react dependency from project
+       */
+      'client-react': path.join(process.cwd(), 'node_modules', 'react'),
+    },
     plugins: [
       /**
        * React Native uses a module system called Haste

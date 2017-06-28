@@ -25,7 +25,7 @@ module.exports = function getBabelConfig(cwd: string) {
 
   return Object.assign({}, babelrc, {
     babelrc: false,
-    plugins: [require.resolve('./fixRequireIssues')].concat(
+    plugins: [require.resolve('./fixRequireIssues'), 'react-hot-loader/babel'].concat(
       babelrc.plugins || [],
     ),
   });
