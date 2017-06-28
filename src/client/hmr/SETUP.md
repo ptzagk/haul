@@ -12,34 +12,15 @@ import {
 } from 'react-native';
 import AppContainer from 'haul/src/client/hmr/AppContainer';
 
-let instance;
-class Wrapper extends Component {
-  constructor(props) {
-    super(props);
-    instance = this;
-  }
-
-  render() {
-    const App = require('./app.ios.js').default;
-    return (
-      <AppContainer>
-        <App />
-      </AppContainer>
-    );
-  }
-}
+AppRegistry.registerComponent(
+  'haulHMR',
+  () => AppContainer(() => require('./app.ios.js').default)
+);
 
 if (module.hot) {
   module.hot.accept('./app.ios.js', () => {
-    instance.forceUpdate();
+    AppContainer.redraw();
   });
 }
-
-AppRegistry.registerComponent(
-  'haulHMR',
-  () => Wrapper
-);
-
-
 
 ```
