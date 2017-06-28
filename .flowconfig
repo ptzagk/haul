@@ -6,3 +6,6 @@
 .*/node_modules/react-native
 .*/node_modules/fbjs/*
 .*/node_modules/jest-validate/*
+
+[options]
+module.name_mapper='^client-react'->'<PROJECT_ROOT>/node_modules/react'
