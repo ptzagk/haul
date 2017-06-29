@@ -23,7 +23,7 @@
  *
  * AppRegistry.registerComponent(
  *   'appKey',
- *   () => withHMR(() => require('./app.ios.js').default)
+ *   withHMR(() => require('./app.ios.js').default)
  * );
  *
  * if (module.hot) {

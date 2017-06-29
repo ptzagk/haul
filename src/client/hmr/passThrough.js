@@ -6,7 +6,7 @@
 /* @flow */
 
 export default function AppContainer(rootFactory: Function) {
-  return rootFactory();
+  return () => rootFactory();
 }
 
 AppContainer.redraw = () => {};
