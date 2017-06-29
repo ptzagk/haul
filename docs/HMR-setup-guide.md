@@ -3,12 +3,12 @@
 
 In order to use HMR please follow this __one-time__ setup process:
 
-1. Rename `index.ios.js` to `app.ios.js` or `index.android.js` to `app.andoid.js`.
+1. Rename `index.ios.js` to `app.ios.js` or `index.android.js` to `app.android.js`.
 
-2. Create `index.ios.js` or `index.andoid.js`.
+2. Create `index.ios.js` or `index.android.js`.
 
 3. Move `AppRegistry` import and the last line from `app.ios.js` to `index.ios.js` or 
-`app.android.js` to `index.andoid.js`:
+`app.android.js` to `index.android.js`:
 
 #### `app.ios.js` / `app.android.js`
 ```diff
@@ -75,7 +75,7 @@ const styles = StyleSheet.create({
 + AppRegistry.registerComponent('myApp', () => myApp);
 ```
 
-4. In `index.ios.js` or `index.andoid.js`, import `haul-hmr` at the top of the file - __it must be the first line__:
+4. In `index.ios.js` or `index.android.js`, import `haul-hmr` at the top of the file - __it must come before any other line of code__:
 
 ```diff
 + import withHmr from 'haul-hmr';
@@ -84,7 +84,7 @@ import { AppRegistry } from 'react-native';
 AppRegistry.registerComponent('myApp', () => myApp);
 ```
 
-5. Replace 2nd argument of `registerComponent` function call with `withHMR(() => require('./app.ios.js').default)` in `index.ios.js` / `index.android.js`:
+5. Replace 2nd argument of `registerComponent` function call with `withHMR(() => require('./app.ios.js').default)` in `index.ios.js` or `index.android.js`:
 
 ```diff
 import withHmr from 'haul-hmr';
@@ -97,7 +97,7 @@ import { AppRegistry } from 'react-native';
 + );
 ```
 
-6. Add the following snippet at the end of the `index.ios.js` / `index.android.js` file:
+6. Add the following snippet at the end of the `index.ios.js` or `index.android.js` file:
 
 ```diff
 import withHmr from 'haul-hmr';
@@ -117,7 +117,7 @@ AppRegistry.registerComponent(
 
 7. Profit.
 
-`withHMR` will add everything needed to support HMR in development and in production (`NODE_ENV=production`) will just pass through component from `app.ios.js` or `app.andoid.js`.
+`withHMR` will add everything needed to support HMR in development and in production (`NODE_ENV=production`) will just pass through component from `app.ios.js` or `app.android.js`.
 
 
 # Enabling Hot Module Reloading
