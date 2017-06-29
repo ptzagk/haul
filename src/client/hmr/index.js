@@ -44,7 +44,7 @@ if (!module.hot || process.env.NODE_ENV === 'production') {
   module.exports = require('./passThrough');
 } else {
   require('../hotClient.js')({
-    path: `${process.env.DEV_SERVER_ORIGIN || ''}/hot`,
+    path: `${process.env.DEV_SERVER_ORIGIN || ''}/haul-hmr`,
     overlay: false,
   });
   require('./patch');
