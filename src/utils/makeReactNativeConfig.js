@@ -183,10 +183,6 @@ const getDefaultConfig = (
   resolve: {
     alias: {
       /**
-       * Resolve path to react dependency from project
-       */
-      'client-react': path.join(process.cwd(), 'node_modules', 'react'),
-      /**
        * Resolve path to HMR module
        */
       'haul-hmr': require.resolve('../client/hmr/index.js'),

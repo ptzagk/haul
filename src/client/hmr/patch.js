@@ -6,7 +6,7 @@
 // @TODO: add more flow types
 
 // eslint-disable-next-line import/no-extraneous-dependencies
-import React from 'client-react';
+import React from 'react';
 import createProxy from 'react-proxy';
 
 class ComponentMap {
