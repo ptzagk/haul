@@ -14,6 +14,7 @@
  * root component and force deep update of the three when calling `redraw`.
  * 
  * @example
+ * ```javascript
  * import withHMR from 'haul-hmr';
  * import React, { Component } from 'react';
  * import {
@@ -30,6 +31,7 @@
  *     withHMR.redraw();
  *   });
  * }
+ * ```
  * 
  * To wrap up, here are the steps to get HMR working (for iOS, Android analogously):
  * 1. Create another file, for instance `app.ios.js` and put the root component there,

@@ -6,7 +6,7 @@
 /* @flow */
 
 // eslint-disable-next-line import/no-extraneous-dependencies
-import React, { Component } from 'client-react';
+import React, { Component } from 'react';
 import deepForceUpdate from 'react-deep-force-update';
 
 /**
@@ -16,8 +16,15 @@ import deepForceUpdate from 'react-deep-force-update';
 let instance;
 export default function AppContainer(rootFactory: Function) {
   return class Wrapper extends Component {
+    state: {
+      error: ?Object,
+    };
+
     constructor(props: *) {
       super(props);
+      this.state = {
+        error: null,
+      };
       instance = this;
     }
 
