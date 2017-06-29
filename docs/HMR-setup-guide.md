@@ -16,7 +16,7 @@ In order to use HMR please follow this __one-time__ setup process:
 
 import React, { Component } from 'react';
 import {
--  AppRegistry,
+-   AppRegistry,
   StyleSheet,
   Text,
   View
@@ -66,9 +66,9 @@ const styles = StyleSheet.create({
 
 #### `index.ios.js` / `index.android.js`
 ```
-+ import { AppRegistry } from 'react-native';
++  import { AppRegistry } from 'react-native';
 
-+ AppRegistry.registerComponent('myApp', () => myApp);
++  AppRegistry.registerComponent('myApp', () => myApp);
 ```
 
 
