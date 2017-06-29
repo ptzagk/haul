@@ -100,7 +100,6 @@ const getDefaultConfig = (
     ],
   },
   plugins: [
-    new webpack.HotModuleReplacementPlugin(),
     /**
      * MacOS has a case insensitive filesystem
      * This is needed so we can error on incorrect case
@@ -154,32 +153,38 @@ const getDefaultConfig = (
       ],
       verbose: false,
     }),
-  ].concat(
-    minify
-      ? [
-          new webpack.optimize.UglifyJsPlugin({
-            /**
+  ]
+    .concat(
+      process.env.NODE_ENV === 'production'
+        ? []
+        : new webpack.HotModuleReplacementPlugin(),
+    )
+    .concat(
+      minify
+        ? [
+            new webpack.optimize.UglifyJsPlugin({
+              /**
              * By default, uglify only minifies *.js files
              * We need to use the plugin to configutr *.bundle to get minified
              * Also disable IE8 support as we don't need it'
              */
-            test: /\.(js|bundle)($|\?)/i,
-            sourceMap: true,
-            compress: {
-              screw_ie8: true,
-              warnings: false,
-            },
-            mangle: {
-              screw_ie8: true,
-            },
-            output: {
-              comments: false,
-              screw_ie8: true,
-            },
-          }),
-        ]
-      : [],
-  ),
+              test: /\.(js|bundle)($|\?)/i,
+              sourceMap: true,
+              compress: {
+                screw_ie8: true,
+                warnings: false,
+              },
+              mangle: {
+                screw_ie8: true,
+              },
+              output: {
+                comments: false,
+                screw_ie8: true,
+              },
+            }),
+          ]
+        : [],
+    ),
   resolve: {
     alias: {
       /**
