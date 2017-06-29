@@ -1,62 +1,149 @@
-// @TODO: refactor & clean up
+/* @flow */
+/* global WebSocket */
 
-function hotMiddleware(compiler, { native, haul }, opts = {}) {
-  // opts = opts || {};
-  // opts.log = typeof opts.log == 'undefined' ? console.log.bind(console) : opts.log;
-  // opts.path = opts.path || '/__webpack_hmr';
-  // opts.heartbeat = opts.heartbeat || 10 * 1000;
+type Compiler = {
+  plugin: (name: string, fn: Function) => void,
+};
 
-  const eventStream = createEventStream(haul, opts.heartbeat);
+type WebSocketProxy = {
+  onConnection: (hanlder: Function) => void,
+};
+
+type WebSocket = {
+  on: (event: string, Function) => void,
+  send: (data: string) => void,
+};
+
+type Connection = {
+  socket: ?WebSocket,
+  isOpen: boolean,
+};
+
+type ClientConnection = {
+  publish: (pyaload: any) => void,
+  publishNativeEvent: (action: string) => void,
+};
+
+type Logger = {
+  log: (...args: Array<mixed>) => void,
+};
+
+/**
+ * Send updates on bundle rebuilds, so that HMR client can donwload update and process it.
+ * In order to support `Enable Hot Reloading` button, we need to 2 connections:
+ * - Native Hot Client (on path `/hot`) - if connected, we know that user enabled hot reloading,
+ *   it's also used to send `update-start` and `update-done` messages, so it shows notification
+ *   on client
+ * - Haul HMR Client (on path `/haul-hmr`) - used to send stats to client, so it can download
+ *   and process actuall update
+ */
+function hotMiddleware(
+  compiler: Compiler,
+  { native, haul }: { native: WebSocketProxy, haul: WebSocketProxy },
+  opts: { debug: boolean } = { debug: false },
+) {
+  const logger: Logger = {
+    log(...args) {
+      if (opts.debug) {
+        console.log('[Hot middleware]', ...args);
+      }
+    },
+  };
+
+  const connection: ClientConnection = createConnection(native, haul, logger);
 
   compiler.plugin('compile', () => {
-    if (opts.log) {
-      opts.log('webpack building...');
-    }
-    eventStream.publish({ action: 'building' });
+    logger.log('webpack building...');
+    connection.publishNativeEvent('update-start');
+    connection.publish({ action: 'building' });
   });
-  compiler.plugin('done', stats => {
-    publishStats('built', stats, eventStream, opts.log);
-    // Explicitly not passing in `log` fn as we don't want to log again on
-    // the server
+
+  compiler.plugin('done', (stats: Object) => {
+    connection.publishNativeEvent('update-done');
+    publishStats('built', stats, connection, logger);
+    // @TODO: check if needed
     // publishStats("sync", stats, eventStream);
   });
 }
 
-function createEventStream(webSocketProxy) {
-  let webSocket;
-  let open = false;
-  webSocketProxy.onConnection(socket => {
-    console.log('Got HMR connection');
-    open = true;
-    webSocket = socket;
-    webSocket.on('open', () => {
-      open = true;
+function setConnection(
+  socketProxy: WebSocketProxy,
+  name: string,
+  connection: Connection,
+  logger: Logger,
+) {
+  socketProxy.onConnection((socket: WebSocket) => {
+    logger.log(`Got ${name} connection`);
+    // eslint-disable-next-line no-param-reassign
+    connection.isOpen = true;
+    // eslint-disable-next-line no-param-reassign
+    connection.socket = socket;
+
+    socket.on('open', () => {
+      // eslint-disable-next-line no-param-reassign
+      connection.isOpen = true;
     });
-    webSocket.on('close', () => {
-      open = false;
+
+    socket.on('close', () => {
+      // eslint-disable-next-line no-param-reassign
+      connection.socket = null;
+      // eslint-disable-next-line no-param-reassign
+      connection.isOpen = false;
     });
   });
+}
+
+function createConnection(
+  nativeProxy: WebSocketProxy,
+  haulProxy: WebSocketProxy,
+  logger: Logger,
+): ClientConnection {
+  const nativeHotConnection: Connection = {
+    socket: null,
+    isOpen: false,
+  };
+
+  const haulHmrConnection: Connection = {
+    socket: null,
+    isOpen: false,
+  };
+
+  setConnection(nativeProxy, 'Native Hot', nativeHotConnection, logger);
+  setConnection(haulProxy, 'Haul HMR', haulHmrConnection, logger);
+
   return {
-    publish(payload) {
-      console.log(webSocket, open);
-      if (webSocket && open) {
-        webSocket.send(JSON.stringify(payload));
+    publishNativeEvent(action: string) {
+      if (nativeHotConnection.isOpen && nativeHotConnection.socket) {
+        nativeHotConnection.socket.send(JSON.stringify({ type: action }));
+      }
+    },
+    publish(payload: any) {
+      if (
+        haulHmrConnection.isOpen &&
+        haulHmrConnection.socket &&
+        nativeHotConnection.isOpen
+      ) {
+        haulHmrConnection.socket.send(JSON.stringify(payload));
       }
     },
   };
 }
 
-function publishStats(action, stats, eventStream, log) {
+function publishStats(
+  action: string,
+  stats: Object,
+  connection: ClientConnection,
+  logger: Logger,
+) {
   // For multi-compiler, stats will be an object with a 'children' array of stats
   const bundles = extractBundles(stats.toJson({ errorDetails: false }));
   bundles.forEach(bundleStats => {
-    if (log) {
-      // eslint-disable-next-line
-      log(
-        `webpack built ${bundleStats.name ? `${bundleStats.name} ` : ''}${bundleStats.hash} in ${bundleStats.time}ms`,
-      );
-    }
-    eventStream.publish({
+    logger.log(
+      `webpack built ${bundleStats.name ? `${bundleStats.name} ` : ''}` +
+        `${bundleStats.hash} in ${bundleStats.time}ms`,
+    );
+
+    connection.publish({
       name: bundleStats.name,
       action,
       time: bundleStats.time,
@@ -68,7 +155,7 @@ function publishStats(action, stats, eventStream, log) {
   });
 }
 
-function extractBundles(stats) {
+function extractBundles(stats: Object): Object[] {
   // Stats has modules, single bundle
   if (stats.modules) return [stats];
 
@@ -79,7 +166,7 @@ function extractBundles(stats) {
   return [stats];
 }
 
-function buildModuleMap(modules) {
+function buildModuleMap(modules: Object[]): Object {
   const map = {};
   modules.forEach(module => {
     map[module.id] = module.name;
