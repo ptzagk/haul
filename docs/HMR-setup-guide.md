@@ -84,7 +84,7 @@ import { AppRegistry } from 'react-native';
 AppRegistry.registerComponent('myApp', () => myApp);
 ```
 
-5. Replace 2nd argument of `registerComponent` function call with `withHMR(() => require('./app.ios.js').default)` in `index.ios.js` or `index.android.js`:
+5. Replace 2nd argument of `registerComponent` function call with `withHmr(() => require('./app.ios.js').default)` in `index.ios.js` or `index.android.js`:
 
 ```diff
 import withHmr from 'haul-hmr';
@@ -92,8 +92,8 @@ import { AppRegistry } from 'react-native';
 
 - AppRegistry.registerComponent('myApp', () => myApp);
 + AppRegistry.registerComponent(
-+   'myApp',
-+   withHMR(() => require('./app.ios.js').default)
++   'myApp', // make sure you put actual app name here
++   withHmr(() => require('./app.ios.js').default)
 + );
 ```
 
@@ -105,19 +105,19 @@ import { AppRegistry } from 'react-native';
 
 AppRegistry.registerComponent(
   'myApp',
-  withHMR(() => require('./app.ios.js').default)
+  withHmr(() => require('./app.ios.js').default)
 );
 
 + if (module.hot) {
 +   module.hot.accept('./app.ios.js', () => {
-+     withHMR.redraw();
++     withHmr.redraw();
 +   });
 + }
 ```
 
 7. Profit.
 
-`withHMR` will add everything needed to support HMR in development and in production (`NODE_ENV=production`) will just pass through component from `app.ios.js` or `app.android.js`.
+`withHmr` will add everything needed to support HMR in development and in production (`NODE_ENV=production`) will just pass through component from `app.ios.js` or `app.android.js`.
 
 
 # Enabling Hot Module Reloading
