@@ -1,4 +1,17 @@
+/**
+ * Copyright 2017-present, Callstack.
+ * All rights reserved.
+ */
+
 /* @flow */
+
+/**
+ * Ideally, this file SHOULD NOT be processed by prettier, since trailing commas
+ * are not supported and will cause errors in bundle. This file is used by `babel-loader`
+ * and `babel-register` won't be able to strip those trailing commas, thus anyone
+ * modifiing this file MUST make sure that prettier won't screw it up - use prettier-ignore
+ * or tweak code, so that it won't be formatted.
+ */
 
 function traverseUpUntil(path, checkFn) {
   let current = path.parentPath;
