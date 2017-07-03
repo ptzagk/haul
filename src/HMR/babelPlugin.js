@@ -66,18 +66,10 @@ function applyHmrTweaks({ types: t, template }, hmrImportPath) {
             APP_SOURCE: rootFactory.body.object.arguments[0],
           });
           program.node.body.push(moduleAcceptAST);
-        } else if (
-          // Try with CommonJS module system
-          t.isCallExpression(rootFactory.body) &&
-          rootFactory.body.callee.name === 'require'
-        ) {
-          const moduleAcceptAST = createModuleAcceptSnippet(template)({
-            APP_SOURCE: rootFactory.body.arguments[0],
-          });
-          program.node.body.push(moduleAcceptAST);
         } else {
-          // prettier-ignore
-          throw new Error('Root component must be imported using `require` function');
+          const message = 'Root component must be exported using `export default` ' +
+            'and imported using `require("filename").default`';
+          throw new Error(message);
         }
       }
     },
