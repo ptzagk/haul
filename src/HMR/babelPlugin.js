@@ -18,8 +18,8 @@ if (module.hot) {
 
 function applyHmrTweaks({ types: t, template }, hmrImportPath) {
   // Convert to named import: import 'haul-hmr' -> import withHmr from 'haul-hmr'
+  // prettier-ignore
   hmrImportPath.node.specifiers.push(
-    // prettier-ignore
     t.importDefaultSpecifier(t.identifier('withHmr')),
   );
 
@@ -51,23 +51,19 @@ function applyHmrTweaks({ types: t, template }, hmrImportPath) {
           t.isCallExpression(rootFactory.body.object) &&
           rootFactory.body.object.callee.name === 'require'
         ) {
-          program.node.body.push(
-            // prettier-ignore
-            createModuleAcceptSnippet(template)({
-              APP_SOURCE: rootFactory.body.object.arguments[0],
-            }),
-          );
+          const moduleAcceptAST = createModuleAcceptSnippet(template)({
+            APP_SOURCE: rootFactory.body.object.arguments[0],
+          });
+          program.node.body.push(moduleAcceptAST);
         } else if (
           // Try with CommonJS module system
           t.isCallExpression(rootFactory.body) &&
           rootFactory.body.callee.name === 'require'
         ) {
-          program.node.body.push(
-            // prettier-ignore
-            createModuleAcceptSnippet(template)({
-              APP_SOURCE: rootFactory.body.arguments[0],
-            }),
-          );
+          const moduleAcceptAST = createModuleAcceptSnippet(template)({
+            APP_SOURCE: rootFactory.body.arguments[0],
+          });
+          program.node.body.push(moduleAcceptAST);
         } else {
           // prettier-ignore
           throw new Error('Root component must be imported using `require` function');
