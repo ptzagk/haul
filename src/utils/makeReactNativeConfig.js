@@ -190,7 +190,7 @@ const getDefaultConfig = (
       /**
        * Resolve path to HMR module
        */
-      'haul-hmr': require.resolve('../client/hmr/index.js'),
+      'haul-hmr': require.resolve('../HMR/client/index.js'),
     },
     plugins: [
       /**
