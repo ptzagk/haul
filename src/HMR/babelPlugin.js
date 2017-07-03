@@ -18,10 +18,8 @@ if (module.hot) {
 
 function applyHmrTweaks({ types: t, template }, hmrImportPath) {
   // Convert to named import: import 'haul-hmr' -> import withHmr from 'haul-hmr'
-  // prettier-ignore
-  hmrImportPath.node.specifiers.push(
-    t.importDefaultSpecifier(t.identifier('withHmr')),
-  );
+  const specifier = t.importDefaultSpecifier(t.identifier('withHmr'));
+  hmrImportPath.node.specifiers.push(specifier);
 
   // Get the root (Program) path
   const program = traverseUpUntil(hmrImportPath, t.isProgram);
