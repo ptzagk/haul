@@ -13,7 +13,14 @@
  * or tweak code, so that it won't be formatted.
  */
 
-function traverseUpUntil(path, checkFn) {
+type Path = {
+  node: Object,
+  parentPath: Path,
+  type: string,
+  traverse: Function,
+};
+
+function traverseUpUntil(path: Path, checkFn: (path: Path) => boolean): Path {
   let current = path.parentPath;
   while (current && !checkFn(current)) {
     current = current.parentPath;
@@ -29,13 +36,13 @@ if (module.hot) {
   });
 }`);
 
-function applyHmrTweaks({ types: t, template }, hmrImportPath) {
+function applyHmrTweaks({ types: t, template }, hmrImportPath: Path) {
   // Convert to named import: import 'haul-hmr' -> import withHmr from 'haul-hmr'
   const specifier = t.importDefaultSpecifier(t.identifier('withHmr'));
   hmrImportPath.node.specifiers.push(specifier);
 
   // Get the root (Program) path
-  const program = traverseUpUntil(hmrImportPath, t.isProgram);
+  const program: Path = traverseUpUntil(hmrImportPath, t.isProgram);
   program.traverse({
     CallExpression(subpath) {
       // Tweak AppRegistry.registerComponent function call
@@ -76,10 +83,10 @@ function applyHmrTweaks({ types: t, template }, hmrImportPath) {
   });
 }
 
-module.exports = babel => {
+module.exports = (babel: Object) => {
   return {
     visitor: {
-      ImportDeclaration(path) {
+      ImportDeclaration(path: Path) {
         if (
           path.node.source.value === 'haul-hmr' && !path.node.specifiers.length
         ) {
