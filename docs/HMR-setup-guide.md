@@ -74,7 +74,7 @@ const styles = StyleSheet.create({
 
 + AppRegistry.registerComponent('myApp', () => myApp);
 ```
-4. Require Root Component in `registerComponent` 2nd argument in `index.ios.js` / `index.android.js`:
+4. Require Root Component in `registerComponent`'s 2nd argument in `index.ios.js` / `index.android.js`:
 ```diff
 import { AppRegistry } from 'react-native';
 
