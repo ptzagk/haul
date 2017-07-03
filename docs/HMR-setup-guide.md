@@ -74,50 +74,28 @@ const styles = StyleSheet.create({
 
 + AppRegistry.registerComponent('myApp', () => myApp);
 ```
-
-4. In `index.ios.js` or `index.android.js`, import `haul-hmr` at the top of the file - __it must come before any other line of code__:
-
+4. Require Root Component in `registerComponent` 2nd argument in `index.ios.js` / `index.android.js`:
 ```diff
-+ import withHmr from 'haul-hmr';
-import { AppRegistry } from 'react-native';
-
-AppRegistry.registerComponent('myApp', () => myApp);
-```
-
-5. Replace 2nd argument of `registerComponent` function call with `withHmr(() => require('./app.ios.js').default)` in `index.ios.js` or `index.android.js`:
-
-```diff
-import withHmr from 'haul-hmr';
 import { AppRegistry } from 'react-native';
 
 - AppRegistry.registerComponent('myApp', () => myApp);
-+ AppRegistry.registerComponent(
-+   'myApp', // make sure you put actual app name here
-+   withHmr(() => require('./app.ios.js').default)
-+ );
++ AppRegistry.registerComponent('myApp', () => require('./app.ios.js')); // use `app.android.js` for `index.andoid.js`
 ```
 
-6. Add the following snippet at the end of the `index.ios.js` or `index.android.js` file:
+5. In `index.ios.js` or `index.android.js`, import `haul-hmr` at the top of the file - __it must come before any other line of code__:
 
 ```diff
-import withHmr from 'haul-hmr';
++ import 'haul-hmr';
 import { AppRegistry } from 'react-native';
 
-AppRegistry.registerComponent(
-  'myApp',
-  withHmr(() => require('./app.ios.js').default)
-);
-
-+ if (module.hot) {
-+   module.hot.accept('./app.ios.js', () => {
-+     withHmr.redraw();
-+   });
-+ }
+AppRegistry.registerComponent('myApp', () => require('./app.ios.js'));
 ```
 
-7. Profit.
+6. Profit.
 
-`withHmr` will add everything needed to support HMR in development and in production (`NODE_ENV=production`) will just pass through component from `app.ios.js` or `app.android.js`.
+`import 'haul-hmr'` works like a switch - if preset, it will tweak you bundle for Hot Reloading
+in development. You can safely leave it when bundling your app, since in production (`NODE_ENV=production`)
+it's a NO-OP.
 
 
 # Enabling Hot Module Reloading
