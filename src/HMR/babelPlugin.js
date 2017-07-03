@@ -8,20 +8,18 @@ function traverseUpUntil(path, checkFn) {
   return current;
 }
 
-const createModuleAcceptSnippet = template =>
-  template(
-    `
+// prettier-ignore
+const createModuleAcceptSnippet = template => template(`
 if (module.hot) {
   module.hot.accept(APP_SOURCE, () => {
     withHmr.redraw();
   });
-}
-`,
-  );
+}`);
 
 function applyHmrTweaks({ types: t, template }, hmrImportPath) {
   // Convert to named import: import 'haul-hmr' -> import withHmr from 'haul-hmr'
   hmrImportPath.node.specifiers.push(
+    // prettier-ignore
     t.importDefaultSpecifier(t.identifier('withHmr')),
   );
 
@@ -54,6 +52,7 @@ function applyHmrTweaks({ types: t, template }, hmrImportPath) {
           rootFactory.body.object.callee.name === 'require'
         ) {
           program.node.body.push(
+            // prettier-ignore
             createModuleAcceptSnippet(template)({
               APP_SOURCE: rootFactory.body.object.arguments[0],
             }),
@@ -64,14 +63,14 @@ function applyHmrTweaks({ types: t, template }, hmrImportPath) {
           rootFactory.body.callee.name === 'require'
         ) {
           program.node.body.push(
+            // prettier-ignore
             createModuleAcceptSnippet(template)({
               APP_SOURCE: rootFactory.body.arguments[0],
             }),
           );
         } else {
-          throw new Error(
-            'Root component must be imported using `require` function',
-          );
+          // prettier-ignore
+          throw new Error('Root component must be imported using `require` function');
         }
       }
     },
