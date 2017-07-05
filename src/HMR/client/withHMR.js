@@ -8,6 +8,24 @@
 // eslint-disable-next-line import/no-extraneous-dependencies
 import React, { Component } from 'react';
 import deepForceUpdate from 'react-deep-force-update';
+// $FlowFixMe
+import Platform from 'Platform'; // eslint-disable-line import/no-extraneous-dependencies
+
+function resetRedBox() {
+  if (Platform.OS === 'ios') {
+    // eslint-disable-next-line import/no-extraneous-dependencies
+    const RCTRedBox = require('NativeModules').RedBox;
+    // eslint-disable-next-line no-unused-expressions
+    RCTRedBox && RCTRedBox.dismiss && RCTRedBox.dismiss();
+  } else {
+    // $FlowFixMe
+    const RCTExceptionsManager = require('NativeModules').ExceptionsManager; // eslint-disable-line import/no-extraneous-dependencies
+    // eslint-disable-next-line no-unused-expressions
+    RCTExceptionsManager &&
+      RCTExceptionsManager.dismissRedbox &&
+      RCTExceptionsManager.dismissRedbox();
+  }
+}
 
 /**
  * Original code was taken from https://github.com/gaearon/react-hot-loader/ by Dan Abramov
@@ -29,6 +47,11 @@ export default function withHMR(rootFactory: Function) {
         instance = this;
       }
 
+      _resetError() {
+        this.setState({ error: null });
+        resetRedBox();
+      }
+
       componentDidMount() {
         // $FlowFixMe
         if (typeof __REACT_HOT_LOADER__ === 'undefined') {
@@ -43,9 +66,7 @@ export default function withHMR(rootFactory: Function) {
       componentWillReceiveProps() {
         // Hot reload is happening.
         // Retry rendering!
-        this.setState({
-          error: null,
-        });
+        this._resetError();
         // Force-update the whole tree, including
         // components that refuse to update.
         deepForceUpdate(this);
@@ -57,13 +78,17 @@ export default function withHMR(rootFactory: Function) {
       // https://github.com/facebook/react/pull/6020
       // eslint-disable-next-line camelcase
       unstable_handleError(error: Object) {
-        // eslint-disable-line camelcase
         this.setState({
           error,
         });
       }
 
       render() {
+        if (this.state.error) {
+          console.error(this.state.error);
+          return null;
+        }
+
         const Root = rootFactory();
         return React.createElement(Root);
       }
@@ -71,5 +96,6 @@ export default function withHMR(rootFactory: Function) {
 }
 
 withHMR.redraw = () => {
+  instance._resetError();
   instance.forceUpdate();
 };
