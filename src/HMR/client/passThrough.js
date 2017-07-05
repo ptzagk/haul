@@ -5,7 +5,7 @@
 
 /* @flow */
 
-export default function AppContainer(rootFactory: Function) {
+export default function passThrough(rootFactory: Function) {
   return () => rootFactory();
 }
 
