@@ -9,4 +9,4 @@ export default function passThrough(rootFactory: Function) {
   return () => rootFactory();
 }
 
-AppContainer.redraw = () => {};
+passThrough.redraw = () => {};
