@@ -3,8 +3,6 @@
  * All rights reserved.
  */
 
-/* @flow */
-
 /**
  * Ideally, this file SHOULD NOT be processed by prettier, since trailing commas
  * are not supported and will cause errors in bundle. This file is used by `babel-loader`
@@ -13,14 +11,14 @@
  * or tweak code, so that it won't be formatted.
  */
 
-type Path = {
-  node: Object,
-  parentPath: Path,
-  type: string,
-  traverse: Function,
-};
+// type Path = {
+//   node: Object,
+//   parentPath: Path,
+//   type: string,
+//   traverse: Function,
+// };
 
-function traverseUpUntil(path: Path, checkFn: (path: Path) => boolean): Path {
+function traverseUpUntil(path, checkFn) {
   let current = path.parentPath;
   while (current && !checkFn(current)) {
     current = current.parentPath;
@@ -36,13 +34,13 @@ if (module.hot) {
   });
 }`);
 
-function applyHmrTweaks({ types: t, template }, hmrImportPath: Path) {
+function applyHmrTweaks({ types: t, template }, hmrImportPath) {
   // Convert to named import: import 'haul-hmr' -> import withHmr from 'haul-hmr'
   const specifier = t.importDefaultSpecifier(t.identifier('withHmr'));
   hmrImportPath.node.specifiers.push(specifier);
 
   // Get the root (Program) path
-  const program: Path = traverseUpUntil(hmrImportPath, t.isProgram);
+  const program = traverseUpUntil(hmrImportPath, t.isProgram);
   program.traverse({
     CallExpression(subpath) {
       // Tweak AppRegistry.registerComponent function call
@@ -83,10 +81,10 @@ function applyHmrTweaks({ types: t, template }, hmrImportPath: Path) {
   });
 }
 
-module.exports = (babel: Object) => {
+module.exports = babel => {
   return {
     visitor: {
-      ImportDeclaration(path: Path) {
+      ImportDeclaration(path) {
         if (
           path.node.source.value === 'haul-hmr' && !path.node.specifiers.length
         ) {
