@@ -32,12 +32,14 @@ function resetRedBox() {
  */
 
 let instance;
-export default function withHMR(rootFactory: Function) {
+export default function withHMR(initialRootFactory: Function) {
   return () =>
     class Wrapper extends Component {
       state: {
         error: ?Object,
       };
+
+      rootComponentFactory: ?Function;
 
       constructor(props: *) {
         super(props);
@@ -45,11 +47,21 @@ export default function withHMR(rootFactory: Function) {
           error: null,
         };
         instance = this;
+        this.rootComponentFactory = null;
       }
 
       _resetError() {
         this.setState({ error: null });
         resetRedBox();
+      }
+
+      _redraw(rootComponentFactory?: Function) {
+        if (rootComponentFactory) {
+          this.rootComponentFactory = rootComponentFactory;
+        }
+
+        this._resetError();
+        this.forceUpdate();
       }
 
       componentDidMount() {
@@ -89,13 +101,25 @@ export default function withHMR(rootFactory: Function) {
           return null;
         }
 
-        const Root = rootFactory();
+        const Root = this.rootComponentFactory
+          ? this.rootComponentFactory()
+          : initialRootFactory();
         return React.createElement(Root);
       }
     };
 }
 
-withHMR.redraw = () => {
-  instance._resetError();
-  instance.forceUpdate();
+withHMR.redraw = rootComponentFactory => {
+  instance._redraw(rootComponentFactory);
+};
+
+withHMR.tryUpdateSelf = () => {
+  if (instance) {
+    setTimeout(
+      () => {
+        instance._redraw();
+      },
+      0,
+    );
+  }
 };

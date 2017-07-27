@@ -11,37 +11,73 @@
  * or tweak code, so that it won't be formatted.
  */
 
-// type Path = {
-//   node: Object,
-//   parentPath: Path,
-//   type: string,
-//   traverse: Function,
-// };
+const { isAbsolute } = require('path');
+const clone = require('clone');
 
-function traverseUpUntil(path, checkFn) {
-  let current = path.parentPath;
-  while (current && !checkFn(current)) {
-    current = current.parentPath;
+const HMR_IMPORT_NAME = 'withHMR';
+
+function isValidChildPath(source) {
+  if (/^\.\.?\//.test(source)) {
+    return true;
   }
-  return current;
+
+  if (isAbsolute(source) && !source.includes('node_modules')) {
+    return true;
+  }
+
+  return false;
 }
 
-// prettier-ignore
-const createModuleAcceptSnippet = template => template(`
-if (module.hot) {
-  module.hot.accept(APP_SOURCE, () => {
-    withHmr.redraw();
-  });
-}`);
+const codeSnippets = [
+  `${HMR_IMPORT_NAME}.tryUpdateSelf();`,
+  `if (!global.__HAUL_HMR__.isInitialised) {
+    APP_REGISTRATION;
+    global.__HAUL_HMR__.isInitialised = true;
+  }`,
+  `if (module.hot) {
+    module.hot.accept(undefined, () => {
+      // Self-accept
+    });
 
-function applyHmrTweaks({ types: t, template }, hmrImportPath) {
-  // Convert to named import: import 'haul-hmr' -> import withHmr from 'haul-hmr'
-  const specifier = t.importDefaultSpecifier(t.identifier('withHmr'));
+    module.hot.accept(CHILDREN_IMPORTS, () => {
+      delete require.cache[require.resolve(ROOT_SOURCE_FILEPATH)];
+      ${HMR_IMPORT_NAME}.redraw(() => require(ROOT_SOURCE_FILEPATH).default);
+    });
+  }
+  `,
+];
+
+// prettier-ignore
+function createHmrLogic(template) {
+  return codeSnippets.map(snippet => template(snippet));
+}
+
+function applyHmrTweaks(
+  { types: t, template },
+  programPath,
+  hmrImportPath,
+  state,
+) {
+  // Convert to named import: import 'haul-hmr' -> import withHMR from 'haul-hmr'
+  const specifier = t.importDefaultSpecifier(t.identifier(HMR_IMPORT_NAME));
   hmrImportPath.node.specifiers.push(specifier);
 
-  // Get the root (Program) path
-  const program = traverseUpUntil(hmrImportPath, t.isProgram);
-  program.traverse({
+  let hasValidDefaultExport = false;
+  let appRegistrationAST = null;
+  const childrenImports = [];
+  const sourceFilepath = state.file.opts.filename.replace(process.cwd(), '.');
+
+  programPath.traverse({
+    ImportDeclaration(subpath) {
+      if (isValidChildPath(subpath.node.source.value)) {
+        childrenImports.push(subpath.node.source.value);
+      }
+    },
+    ExportDefaultDeclaration(subpath) {
+      if (t.isClassDeclaration(subpath.node.declaration)) {
+        hasValidDefaultExport = true;
+      }
+    },
     CallExpression(subpath) {
       // Tweak AppRegistry.registerComponent function call
       if (
@@ -52,44 +88,57 @@ function applyHmrTweaks({ types: t, template }, hmrImportPath) {
         // Original Root component factory function
         const rootFactory = subpath.node.arguments[1];
 
-        // Wrap Root component factory using withHmr
+        // Wrap Root component factory using withHMR
         // eslint-disable-next-line no-param-reassign
         subpath.node.arguments = [
           subpath.node.arguments[0],
-          t.callExpression(t.identifier('withHmr'), [rootFactory]),
+          t.callExpression(t.identifier(HMR_IMPORT_NAME), [rootFactory]),
         ];
 
-        // Check if body of app factory is a require call and use source file path
-        // to generate module accept snippet, it should look like this:
-        // withHmr(() => require('./file').default)
-        if (
-          t.isMemberExpression(rootFactory.body) &&
-          t.isCallExpression(rootFactory.body.object) &&
-          rootFactory.body.object.callee.name === 'require'
-        ) {
-          const moduleAcceptAST = createModuleAcceptSnippet(template)({
-            APP_SOURCE: rootFactory.body.object.arguments[0],
-          });
-          program.node.body.push(moduleAcceptAST);
-        } else {
-          const message = 'Root component must be exported using `export default` ' +
-            'and imported using `require("filename").default`';
-          throw new Error(message);
-        }
+        appRegistrationAST = clone(subpath);
+        subpath.remove();
       }
     },
   });
+
+  // Throw error if the root component is not a exported as default
+  if (!hasValidDefaultExport) {
+    throw new Error('Root component must be exported using `export default`');
+  }
+
+  if (!appRegistrationAST) {
+    throw new Error(
+      '`haul-hmr` must be imported in the Root component with the presense ' +
+        'of `AppRegistry.registerComponent` call',
+    );
+  }
+
+  programPath.node.body.push(
+    ...createHmrLogic(template).map(tmpl =>
+      tmpl({
+        APP_REGISTRATION: appRegistrationAST,
+        CHILDREN_IMPORTS: t.arrayExpression(
+          childrenImports.map(item => t.stringLiteral(item)),
+        ),
+        ROOT_SOURCE_FILEPATH: t.stringLiteral(sourceFilepath),
+      })),
+  );
 }
 
 module.exports = babel => {
   return {
     visitor: {
-      ImportDeclaration(path) {
-        if (
-          path.node.source.value === 'haul-hmr' && !path.node.specifiers.length
-        ) {
-          applyHmrTweaks(babel, path);
-        }
+      Program(path, state) {
+        path.traverse({
+          ImportDeclaration(importPath) {
+            if (
+              importPath.node.source.value === 'haul-hmr' &&
+              !importPath.node.specifiers.length
+            ) {
+              applyHmrTweaks(babel, path, importPath, state);
+            }
+          },
+        });
       },
     },
   };
