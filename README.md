@@ -68,7 +68,7 @@ Check out the docs to learn more about available commands and tips on customizin
 1. [Configuration](docs/Configuration.md)
 
 ### Hot Module Replacement
-To enable HMR, add `import 'haul-hmr'` to the file with a root component (usually it's `index.ios.js` or `index.android.js`), then from within the Developer tools press _Enable Hot Reloading_.
+To enable HMR, add `import 'haul-hmr'` to the file with a root component (usually it's `index.ios.js` or `index.android.js`), then from within the _Developer menu_ press _Enable Hot Reloading_.
 
 ## Limitations
 
