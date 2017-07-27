@@ -66,7 +66,7 @@ function applyHmrTweaks(
   let hasValidDefaultExport = false;
   let appRegistrationAST = null;
   const childrenImports = [];
-  const sourceFilepath = state.file.opts.filename.replace(process.cwd(), '.');
+  const sourceFilepath = state.file.opts.filename;
 
   programPath.traverse({
     ImportDeclaration(subpath) {
