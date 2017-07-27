@@ -18,7 +18,7 @@ Haul is a drop-in replacement for `react-native` CLI built on open tools like We
 - Access to full webpack ecosystem, using additonal loaders and plugins is simple
 - Doesn't need watchman, symlinks work nicely
 - Helpful and easy to understand error messages
-- Hot Module Reloading (for instructions please read this [HMR setup guide](./docs/HMR-setup-guide.md))
+- Hot Module Reloading
 
 ## Getting started
 
@@ -66,6 +66,9 @@ Check out the docs to learn more about available commands and tips on customizin
 
 1. [CLI Commands](docs/CLI%20Commands.md)
 1. [Configuration](docs/Configuration.md)
+
+### Hot Module Replacement
+To enable HMR, add `import 'haul-hmr'` to the file with a root component (usually it's `index.ios.js` or `index.android.js`), then from within the Developer tools press _Enable Hot Reloading_.
 
 ## Limitations
 
