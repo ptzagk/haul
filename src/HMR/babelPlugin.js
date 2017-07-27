@@ -109,8 +109,9 @@ function applyHmrTweaks(
 
   if (!appRegistrationAST) {
     throw new Error(
+      // prettier-ignore
       '`haul-hmr` must be imported in the Root component with the presense ' +
-        'of `AppRegistry.registerComponent` call',
+        'of `AppRegistry.registerComponent` call'
     );
   }
 
@@ -120,7 +121,8 @@ function applyHmrTweaks(
       tmpl({
         APP_REGISTRATION: appRegistrationAST,
         CHILDREN_IMPORTS: t.arrayExpression(
-          childrenImports.map(item => t.stringLiteral(item)),
+          // prettier-ignore
+          childrenImports.map(item => t.stringLiteral(item))
         ),
         ROOT_SOURCE_FILEPATH: t.stringLiteral(sourceFilepath),
       }))
