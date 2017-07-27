@@ -52,11 +52,12 @@ function createHmrLogic(template) {
   return codeSnippets.map(snippet => template(snippet));
 }
 
+// prettier-ignore
 function applyHmrTweaks(
   { types: t, template },
   programPath,
   hmrImportPath,
-  state,
+  state
 ) {
   // Convert to named import: import 'haul-hmr' -> import withHMR from 'haul-hmr'
   const specifier = t.importDefaultSpecifier(t.identifier(HMR_IMPORT_NAME));
@@ -115,13 +116,14 @@ function applyHmrTweaks(
 
   programPath.node.body.push(
     ...createHmrLogic(template).map(tmpl =>
+      // prettier-ignore
       tmpl({
         APP_REGISTRATION: appRegistrationAST,
         CHILDREN_IMPORTS: t.arrayExpression(
           childrenImports.map(item => t.stringLiteral(item)),
         ),
         ROOT_SOURCE_FILEPATH: t.stringLiteral(sourceFilepath),
-      })),
+      }))
   );
 }
 
