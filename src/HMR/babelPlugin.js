@@ -17,6 +17,8 @@ const clone = require('clone');
 const MAKE_HOT_NAME = 'makeHot';
 const REDRAW_NAME = 'redraw';
 const TRY_UPDATE_SELF_NAME = 'tryUpdateSelf';
+const CALL_ONCE_NAME = 'callOnce';
+const CLEAR_CACHE_FOR_NAME = 'clearCacheFor';
 
 function isValidChildPath(source) {
   if (/^\.\.?\//.test(source)) {
@@ -32,17 +34,17 @@ function isValidChildPath(source) {
 
 const codeSnippets = [
   `${TRY_UPDATE_SELF_NAME}();`,
-  `if (!global.__HAUL_HMR__.isInitialised) {
-    APP_REGISTRATION;
-    global.__HAUL_HMR__.isInitialised = true;
-  }`,
+  `${CALL_ONCE_NAME}(() => {
+    APP_REGISTRATION
+  });
+  `,
   `if (module.hot) {
     module.hot.accept(undefined, () => {
       // Self-accept
     });
 
     module.hot.accept(CHILDREN_IMPORTS, () => {
-      delete require.cache[require.resolve(ROOT_SOURCE_FILEPATH)];
+      ${CLEAR_CACHE_FOR_NAME}(require.resolve(ROOT_SOURCE_FILEPATH));
       ${REDRAW_NAME}(() => require(ROOT_SOURCE_FILEPATH).default);
     });
   }
@@ -65,6 +67,8 @@ function applyHmrTweaks(
     t.importSpecifier(t.identifier(MAKE_HOT_NAME), t.identifier(MAKE_HOT_NAME)),
     t.importSpecifier(t.identifier(REDRAW_NAME), t.identifier(REDRAW_NAME)),
     t.importSpecifier(t.identifier(TRY_UPDATE_SELF_NAME), t.identifier(TRY_UPDATE_SELF_NAME)),
+    t.importSpecifier(t.identifier(CALL_ONCE_NAME), t.identifier(CALL_ONCE_NAME)),
+    t.importSpecifier(t.identifier(CLEAR_CACHE_FOR_NAME), t.identifier(CLEAR_CACHE_FOR_NAME)),
   ];
   hmrImportPath.node.specifiers.push(...specifiers);
   let hasValidDefaultExport = false;

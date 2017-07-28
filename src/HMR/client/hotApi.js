@@ -93,3 +93,14 @@ export function tryUpdateSelf() {
     }, 0);
   }
 }
+
+export function callOnce(callback: Function) {
+  if (!global.__HAUL_HMR__.isInitialised) {
+    callback();
+    global.__HAUL_HMR__.isInitialised = true;
+  }
+}
+
+export function clearCacheFor(resolvedModuleName: string) {
+  delete require.cache[resolvedModuleName];
+}

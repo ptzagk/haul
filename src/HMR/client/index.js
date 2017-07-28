@@ -6,9 +6,10 @@
 /* @flow */
 
 /**
- * When imported, this module will setup almost everything needed for HMR.
+ * When imported, this module will setup almost everything needed for HMR or provide an API
+ * for setting it up manualy in case of more advanced projects.
  * 
- * In production `withHMR` will do literally nothing.
+ * In production it will do nothing.
  */
 
 if (!module.hot || process.env.NODE_ENV === 'production') {
@@ -16,6 +17,10 @@ if (!module.hot || process.env.NODE_ENV === 'production') {
     makeHot() {},
     redraw() {},
     tryUpdateSelf() {},
+    callOnce(callback: Function) {
+      callback();
+    },
+    clearCacheFor() {},
   };
 } else {
   global.__HAUL_HMR__ = global.__HAUL_HMR__ || {};
