@@ -77,7 +77,7 @@ export function makeHot(initialRootFactory: Function) {
         const Root = this.rootComponentFactory
           ? this.rootComponentFactory()
           : initialRootFactory();
-        return React.createElement(Root);
+        return <Root {...this.props} />;
       }
     };
 }
