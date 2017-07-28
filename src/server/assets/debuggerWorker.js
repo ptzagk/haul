@@ -13,11 +13,11 @@
 
 'use strict';
 
-onmessage = (function() {
+onmessage = (() => {
   let visibilityState;
-  const showVisibilityWarning = (function() {
+  const showVisibilityWarning = (() => {
     let hasWarned = false;
-    return function() {
+    return () => {
       // Wait until `YellowBox` gets initialized before displaying the warning.
       if (hasWarned || console.warn.toString().includes('[native code]')) {
         return;
@@ -30,65 +30,95 @@ onmessage = (function() {
     };
   })();
 
+  let shouldQueueIncomingMessages = false;
+  const messageQueue = [];
+
+  // Flush enqueued message handlers and execute them
+  function flushMessageQueue() {
+    while (messageQueue.length) {
+      const processMessage = messageQueue.shift();
+      processMessage();
+    }
+
+    if (messageQueue.length) {
+      flushMessageQueue();
+    } else {
+      shouldQueueIncomingMessages = false;
+    }
+  }
+
   const messageHandlers = {
-    executeApplicationScript(message, sendReply, cb) {
+    executeApplicationScript(message, sendReply) {
+      // Enqueue next messages, since they need to be process after `executeApplicationScript`
+      // sends a response
+      shouldQueueIncomingMessages = true;
+
       for (const key in message.inject) {
         self[key] = JSON.parse(message.inject[key]);
       }
 
-      function evalJS(js) {
+      fetch(message.url).then(resp => resp.text()).then(js => {
+        let errorMessage;
         try {
           (new Function(js))();
-        } catch (e) {
+        } catch (error) {
+          errorMessage = error.message;
           if (self.ErrorUtils) {
-            self.ErrorUtils.reportFatalError(e);
+            self.ErrorUtils.reportFatalError(error);
           } else {
-            console.error(e);
+            console.error(error);
           }
         } finally {
-          self.postMessage({ replyID: message.id });
-          cb();
+          sendReply(null, errorMessage);
+          // Flush the queue
+          flushMessageQueue();
         }
-      }
-
-      fetch(message.url).then(resp => resp.text()).then(evalJS);
+      });
     },
-    setDebuggerVisibility(message) {
+    setDebuggerVisibility(message, sendReply) {
       visibilityState = message.visibilityState;
     },
   };
 
   return function(message) {
-    if (visibilityState === 'hidden') {
-      showVisibilityWarning();
-    }
+    // Create message prcoessing function
+    const processMessage = () => {
+      if (visibilityState === 'hidden') {
+        showVisibilityWarning();
+      }
 
-    const obj = message.data;
+      const obj = message.data;
 
-    const sendReply = function(result, error) {
-      postMessage({ replyID: obj.id, result, error });
+      const sendReply = function(result, error) {
+        postMessage({ replyID: obj.id, result, error });
+      };
+
+      const handler = messageHandlers[obj.method];
+
+      // Special cased handlers
+      if (handler) {
+        handler(obj, sendReply);
+      } else {
+        let returnValue = [[], [], [], 0];
+        let error;
+        try {
+          if (typeof __fbBatchedBridge === 'object' && __fbBatchedBridge[obj.method]) {
+            returnValue = __fbBatchedBridge[obj.method].apply(null, obj.arguments);
+          } else {
+            error = 'Failed to call function, __fbBatchedBridge is undefined';
+          }
+        } catch (err) {
+          error = err.message;
+        } finally {
+          sendReply(JSON.stringify(returnValue), error);
+        }
+      }
     };
 
-    const handler = messageHandlers[obj.method];
-
-    function next() {
-      // Other methods get called on the bridge
-      let returnValue = [[], [], [], 0];
-      try {
-        if (typeof __fbBatchedBridge === 'object' && __fbBatchedBridge[obj.method]) {
-          returnValue = __fbBatchedBridge[obj.method].apply(null, obj.arguments);
-        }
-      } finally {
-        sendReply(JSON.stringify(returnValue));
-      }
-    }
-
-    // Special cased handlers
-    if (handler) {
-      handler(obj, sendReply, next);
-      return;
+    if (shouldQueueIncomingMessages) {
+      messageQueue.push(processMessage);
     } else {
-      next();
+      processMessage();
     }
   };
 })();
