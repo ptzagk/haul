@@ -52,9 +52,10 @@ function AssetResolver(options: Options) {
                       Number(a.replace(/[^\d.]/g, '')) -
                       Number(b.replace(/[^\d.]/g, '')),
                   )[0];
-              resolved = map[key] && map[key].name
-                ? path.resolve(path.dirname(request.path), map[key].name)
-                : null;
+              resolved =
+                map[key] && map[key].name
+                  ? path.resolve(path.dirname(request.path), map[key].name)
+                  : null;
             }
 
             if (resolved) {
@@ -62,7 +63,8 @@ function AssetResolver(options: Options) {
                 null,
                 Object.assign({}, request, {
                   path: resolved,
-                  relativePath: request.relativePath &&
+                  relativePath:
+                    request.relativePath &&
                     resolver.join(request.relativePath, resolved),
                   file: true,
                 }),
@@ -86,43 +88,42 @@ AssetResolver.collect = (
 ) => {
   const regex = /^(bmp|gif|jpg|jpeg|png|psd|tiff|webp|svg)$/.test(type)
     ? new RegExp(
-        `^${escapeStringRegexp(name)}(@\\d+(\\.\\d+)?x)?(\\.(${platform}|native))?\\.${type}$`,
+        `^${escapeStringRegexp(
+          name,
+        )}(@\\d+(\\.\\d+)?x)?(\\.(${platform}|native))?\\.${type}$`,
       )
     : new RegExp(
         `^${escapeStringRegexp(name)}(\\.(${platform}|native))?\\.${type}$`,
       );
 
   // Build a map of files according to the scale
-  return list.reduce(
-    (acc, curr) => {
-      const match = regex.exec(curr);
+  return list.reduce((acc, curr) => {
+    const match = regex.exec(curr);
 
-      if (match) {
-        let [x, scale, y, z, platform] = match; // eslint-disable-line
+    if (match) {
+      let [x, scale, y, z, platform] = match; // eslint-disable-line
 
-        scale = scale || '@1x';
+      scale = scale || '@1x';
 
-        if (acc[scale]) {
-          // platform takes highest prio, so if it exists, don't do anything
-          if (acc[scale].platform === platform) {
-            return acc;
-          }
-
-          // native takes second prio, so if it exists and platform doesn't, don't do anything
-          if (acc[scale].platform === 'native' && !platform) {
-            return acc;
-          }
+      if (acc[scale]) {
+        // platform takes highest prio, so if it exists, don't do anything
+        if (acc[scale].platform === platform) {
+          return acc;
         }
 
-        return Object.assign({}, acc, {
-          [scale]: { platform, name: curr },
-        });
+        // native takes second prio, so if it exists and platform doesn't, don't do anything
+        if (acc[scale].platform === 'native' && !platform) {
+          return acc;
+        }
       }
 
-      return acc;
-    },
-    {},
-  );
+      return Object.assign({}, acc, {
+        [scale]: { platform, name: curr },
+      });
+    }
+
+    return acc;
+  }, {});
 };
 
 module.exports = AssetResolver;
