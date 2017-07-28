@@ -14,7 +14,8 @@
  * Native `importScripts` is synchronous, however we can't do that, so this polyfill
  * is async and returns a Promise.
  */
-global.importScripts = global.importScripts ||
+global.importScripts =
+  global.importScripts ||
   (importPath =>
     new Promise((resolve: Function, reject: Function) => {
       const timeout: number = 10000;

@@ -5,34 +5,17 @@
 
 /* @flow */
 
+/**
+ * Original code was written by Dan Abramov - https://github.com/gaearon/react-hot-loader/
+ */
+
 // eslint-disable-next-line import/no-extraneous-dependencies
 import React, { Component } from 'react';
 import deepForceUpdate from 'react-deep-force-update';
-// $FlowFixMe
-import Platform from 'Platform'; // eslint-disable-line import/no-extraneous-dependencies
-
-function resetRedBox() {
-  if (Platform.OS === 'ios') {
-    // eslint-disable-next-line import/no-extraneous-dependencies
-    const RCTRedBox = require('NativeModules').RedBox;
-    // eslint-disable-next-line no-unused-expressions
-    RCTRedBox && RCTRedBox.dismiss && RCTRedBox.dismiss();
-  } else {
-    // $FlowFixMe
-    const RCTExceptionsManager = require('NativeModules').ExceptionsManager; // eslint-disable-line import/no-extraneous-dependencies
-    // eslint-disable-next-line no-unused-expressions
-    RCTExceptionsManager &&
-      RCTExceptionsManager.dismissRedbox &&
-      RCTExceptionsManager.dismissRedbox();
-  }
-}
-
-/**
- * Original code was taken from https://github.com/gaearon/react-hot-loader/ by Dan Abramov
- */
+import resetRedBox from './utils';
 
 let instance;
-export default function withHMR(initialRootFactory: Function) {
+export function makeHot(initialRootFactory: Function) {
   return () =>
     class Wrapper extends Component {
       state: {
@@ -61,12 +44,11 @@ export default function withHMR(initialRootFactory: Function) {
         }
 
         this._resetError();
-        this.forceUpdate();
+        deepForceUpdate(this);
       }
 
       componentDidMount() {
-        // $FlowFixMe
-        if (typeof __REACT_HOT_LOADER__ === 'undefined') {
+        if (typeof global.__REACT_HOT_LOADER__ === 'undefined') {
           console.error(
             'Haul HMR: It appears that "haul-hmr/patch" ' +
               'did not run immediately before the app started. Make sure that it ' +
@@ -76,20 +58,11 @@ export default function withHMR(initialRootFactory: Function) {
       }
 
       componentWillReceiveProps() {
-        // Hot reload is happening.
-        // Retry rendering!
         this._resetError();
-        // Force-update the whole tree, including
-        // components that refuse to update.
         deepForceUpdate(this);
       }
 
-      // This hook is going to become official in React 15.x.
-      // In 15.0, it only catches errors on initial mount.
-      // Later it will work for updates as well:
-      // https://github.com/facebook/react/pull/6020
-      // eslint-disable-next-line camelcase
-      unstable_handleError(error: Object) {
+      componentDidCatch(error: Object) {
         this.setState({
           error,
         });
@@ -109,17 +82,14 @@ export default function withHMR(initialRootFactory: Function) {
     };
 }
 
-withHMR.redraw = rootComponentFactory => {
+export function redraw(rootComponentFactory: Function) {
   instance._redraw(rootComponentFactory);
-};
+}
 
-withHMR.tryUpdateSelf = () => {
+export function tryUpdateSelf() {
   if (instance) {
-    setTimeout(
-      () => {
-        instance._redraw();
-      },
-      0,
-    );
+    setTimeout(() => {
+      instance._redraw();
+    }, 0);
   }
-};
+}

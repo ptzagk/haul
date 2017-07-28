@@ -51,12 +51,16 @@ function processPayload(payload, { logger, reporter, ...opts }) {
   switch (payload.action) {
     case 'building':
       logger.log(
-        `[Haul HMR] Bundle ${payload.name ? `'${payload.name}' ` : ''}rebuilding`,
+        `[Haul HMR] Bundle ${payload.name
+          ? `'${payload.name}' `
+          : ''}rebuilding`,
       );
       break;
     case 'built':
       logger.log(
-        `[Haul HMR] Bundle ${payload.name ? `'${payload.name}' ` : ''}rebuilt in ${payload.time}ms`,
+        `[Haul HMR] Bundle ${payload.name
+          ? `'${payload.name}' `
+          : ''}rebuilt in ${payload.time}ms`,
       );
     // fall through
     case 'sync':

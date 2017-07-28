@@ -4,7 +4,7 @@
  */
 
 /**
- * Original code taken from https://github.com/gaearon/react-hot-loader/ by Dan Abramov
+ * Original code was written by Dan Abramov - https://github.com/gaearon/react-hot-loader/
  */
 
 /* @flow */

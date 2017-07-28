@@ -11,10 +11,12 @@
  * or tweak code, so that it won't be formatted.
  */
 
-const { isAbsolute } = require('path');
+const { isAbsolute, join } = require('path');
 const clone = require('clone');
 
-const HMR_IMPORT_NAME = 'withHMR';
+const MAKE_HOT_NAME = 'makeHot';
+const REDRAW_NAME = 'redraw';
+const TRY_UPDATE_SELF_NAME = 'tryUpdateSelf';
 
 function isValidChildPath(source) {
   if (/^\.\.?\//.test(source)) {
@@ -29,7 +31,7 @@ function isValidChildPath(source) {
 }
 
 const codeSnippets = [
-  `${HMR_IMPORT_NAME}.tryUpdateSelf();`,
+  `${TRY_UPDATE_SELF_NAME}();`,
   `if (!global.__HAUL_HMR__.isInitialised) {
     APP_REGISTRATION;
     global.__HAUL_HMR__.isInitialised = true;
@@ -41,13 +43,12 @@ const codeSnippets = [
 
     module.hot.accept(CHILDREN_IMPORTS, () => {
       delete require.cache[require.resolve(ROOT_SOURCE_FILEPATH)];
-      ${HMR_IMPORT_NAME}.redraw(() => require(ROOT_SOURCE_FILEPATH).default);
+      ${REDRAW_NAME}(() => require(ROOT_SOURCE_FILEPATH).default);
     });
   }
   `,
 ];
 
-// prettier-ignore
 function createHmrLogic(template) {
   return codeSnippets.map(snippet => template(snippet));
 }
@@ -59,14 +60,20 @@ function applyHmrTweaks(
   hmrImportPath,
   state
 ) {
-  // Convert to named import: import 'haul-hmr' -> import withHMR from 'haul-hmr'
-  const specifier = t.importDefaultSpecifier(t.identifier(HMR_IMPORT_NAME));
-  hmrImportPath.node.specifiers.push(specifier);
-
+  // Convert to named import: import 'haul-hmr' -> import haulHMR from 'haul-hmr'
+  const specifiers = [
+    t.importSpecifier(t.identifier(MAKE_HOT_NAME), t.identifier(MAKE_HOT_NAME)),
+    t.importSpecifier(t.identifier(REDRAW_NAME), t.identifier(REDRAW_NAME)),
+    t.importSpecifier(t.identifier(TRY_UPDATE_SELF_NAME), t.identifier(TRY_UPDATE_SELF_NAME)),
+  ];
+  hmrImportPath.node.specifiers.push(...specifiers);
   let hasValidDefaultExport = false;
   let appRegistrationAST = null;
   const childrenImports = [];
-  const sourceFilepath = state.file.opts.filename;
+  let sourceFilepath = state.file.opts.filename;
+  if (!sourceFilepath.includes(process.cwd())) {
+    sourceFilepath = join(process.cwd(), sourceFilepath);
+  }
 
   programPath.traverse({
     ImportDeclaration(subpath) {
@@ -93,7 +100,10 @@ function applyHmrTweaks(
         // eslint-disable-next-line no-param-reassign
         subpath.node.arguments = [
           subpath.node.arguments[0],
-          t.callExpression(t.identifier(HMR_IMPORT_NAME), [rootFactory]),
+          t.callExpression(
+            t.identifier(MAKE_HOT_NAME),
+            [rootFactory]
+          ),
         ];
 
         appRegistrationAST = clone(subpath);
@@ -104,13 +114,13 @@ function applyHmrTweaks(
 
   // Throw error if the root component is not a exported as default
   if (!hasValidDefaultExport) {
-    throw new Error('Root component must be exported using `export default`');
+    throw new Error('Haul HMR: Root component must be exported using `export default`');
   }
 
   if (!appRegistrationAST) {
     throw new Error(
       // prettier-ignore
-      '`haul-hmr` must be imported in the Root component with the presense ' +
+      'Haul HMR: `haul-hmr` must be imported in the Root component with the presense ' +
         'of `AppRegistry.registerComponent` call'
     );
   }

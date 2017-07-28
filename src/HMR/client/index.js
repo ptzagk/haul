@@ -12,7 +12,11 @@
  */
 
 if (!module.hot || process.env.NODE_ENV === 'production') {
-  module.exports = require('./passThrough');
+  module.exports = {
+    makeHot() {},
+    redraw() {},
+    tryUpdateSelf() {},
+  };
 } else {
   global.__HAUL_HMR__ = global.__HAUL_HMR__ || {};
   require('./hotClient.js')({
@@ -20,5 +24,5 @@ if (!module.hot || process.env.NODE_ENV === 'production') {
     overlay: false,
   });
   require('./patch');
-  module.exports = require('./withHMR');
+  module.exports = require('./hotApi');
 }
