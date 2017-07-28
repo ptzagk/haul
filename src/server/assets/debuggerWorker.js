@@ -31,18 +31,23 @@ onmessage = (function() {
   })();
 
   const messageHandlers = {
-    executeApplicationScript(message, sendReply) {
+    executeApplicationScript(message, sendReply, cb) {
       for (const key in message.inject) {
         self[key] = JSON.parse(message.inject[key]);
       }
 
       function evalJS(js) {
         try {
-          eval(js);
+          (new Function(js))();
         } catch (e) {
-          self.ErrorUtils.reportFatalError(e);
+          if (self.ErrorUtils) {
+            self.ErrorUtils.reportFatalError(e);
+          } else {
+            console.error(e);
+          }
         } finally {
           self.postMessage({ replyID: message.id });
+          cb();
         }
       }
 
@@ -66,20 +71,24 @@ onmessage = (function() {
 
     const handler = messageHandlers[obj.method];
 
-    // Special cased handlers
-    if (handler) {
-      handler(obj, sendReply);
-      return;
+    function next() {
+      // Other methods get called on the bridge
+      let returnValue = [[], [], [], 0];
+      try {
+        if (typeof __fbBatchedBridge === 'object' && __fbBatchedBridge[obj.method]) {
+          returnValue = __fbBatchedBridge[obj.method].apply(null, obj.arguments);
+        }
+      } finally {
+        sendReply(JSON.stringify(returnValue));
+      }
     }
 
-    // Other methods get called on the bridge
-    let returnValue = [[], [], [], 0];
-    try {
-      if (typeof __fbBatchedBridge === 'object') {
-        returnValue = __fbBatchedBridge[obj.method].apply(null, obj.arguments);
-      }
-    } finally {
-      sendReply(JSON.stringify(returnValue));
+    // Special cased handlers
+    if (handler) {
+      handler(obj, sendReply, next);
+      return;
+    } else {
+      next();
     }
   };
 })();
