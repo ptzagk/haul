@@ -130,7 +130,7 @@ module.exports = async function assetLoader() {
   let publicPath = JSON.stringify(
     path.join(assets, url).replace(pathSepPattern, '/'),
   );
-  console.log(config);
+
   if (config.publicPath) {
     // support functions as publicPath to generate them dynamically
     publicPath = JSON.stringify(
@@ -139,7 +139,6 @@ module.exports = async function assetLoader() {
         : path.join(config.publicPath, url),
     );
   }
-  console.log(publicPath);
 
   const hashes = pairs.map(item => hasha(item.content, { algorithm: 'md5' }));
 
