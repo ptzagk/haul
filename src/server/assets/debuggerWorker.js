@@ -66,7 +66,9 @@ onmessage = (() => {
           self.postMessage({ replyID: message.id });
           processEnqueuedMessages();
         }
-      });
+      }
+
+      fetch(message.url).then(resp => resp.text()).then(evalJS.bind({}));
     },
     setDebuggerVisibility(message, sendReply) {
       visibilityState = message.visibilityState;

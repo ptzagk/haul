@@ -14,8 +14,8 @@ import React, { Component } from 'react';
 import deepForceUpdate from 'react-deep-force-update';
 import resetRedBox from './utils';
 
-let instance;
-export function makeHot(initialRootFactory: Function) {
+const instances = {};
+export function makeHot(initialRootFactory: Function, id?: string = 'default') {
   return () =>
     class Wrapper extends Component {
       state: {
@@ -29,7 +29,7 @@ export function makeHot(initialRootFactory: Function) {
         this.state = {
           error: null,
         };
-        instance = this;
+        instances[id] = this;
         this.rootComponentFactory = null;
       }
 
@@ -82,16 +82,19 @@ export function makeHot(initialRootFactory: Function) {
     };
 }
 
-export function redraw(rootComponentFactory: Function) {
-  instance._redraw(rootComponentFactory);
+export function redraw(
+  rootComponentFactory: Function,
+  id?: string = 'default',
+) {
+  instances[id]._redraw(rootComponentFactory);
 }
 
 export function tryUpdateSelf() {
-  if (instance) {
+  Object.keys(instances).forEach(id => {
     setTimeout(() => {
-      instance._redraw();
+      instances[id]._redraw();
     }, 0);
-  }
+  });
 }
 
 export function callOnce(callback: Function) {
