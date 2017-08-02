@@ -1,6 +1,8 @@
 /* @flow */
 /* global WebSocket */
 
+const { Observable } = require('rxjs/Rx');
+
 type Compiler = {
   plugin: (name: string, fn: Function) => void,
 };
@@ -12,16 +14,6 @@ type WebSocketProxy = {
 type WebSocket = {
   on: (event: string, Function) => void,
   send: (data: string) => void,
-};
-
-type Connection = {
-  socket: ?WebSocket,
-  isOpen: boolean,
-};
-
-type ClientConnection = {
-  publish: (pyaload: any) => void,
-  publishNativeEvent: (action: string) => void,
 };
 
 type Logger = {
@@ -39,7 +31,10 @@ type Logger = {
  */
 function hotMiddleware(
   compiler: Compiler,
-  { native, haul }: { native: WebSocketProxy, haul: WebSocketProxy },
+  {
+    nativeProxy,
+    haulProxy,
+  }: { nativeProxy: WebSocketProxy, haulProxy: WebSocketProxy },
   opts: { debug: boolean } = { debug: false },
 ) {
   const logger: Logger = {
@@ -50,108 +45,100 @@ function hotMiddleware(
     },
   };
 
-  const connection: ClientConnection = createConnection(native, haul, logger);
+  const createLog = (...msgs) => {
+    return () => logger.log(...msgs);
+  };
 
-  compiler.plugin('compile', () => {
-    logger.log('webpack building...');
-    connection.publishNativeEvent('update-start');
-    connection.publish({ action: 'building' });
-  });
+  const compilerEvent$ = createCompilerEventStream(compiler);
+  const nativeConnections$ = createConnectionStream(nativeProxy, 'native');
+  const haulConnections$ = createConnectionStream(haulProxy, 'haul');
 
-  compiler.plugin('done', (stats: Object) => {
-    connection.publishNativeEvent('update-done');
-    publishStats('built', stats, connection, logger);
-    // @TODO: check if needed
-    // publishStats("sync", stats, eventStream);
+  compilerEvent$
+    .withLatestFrom(
+      nativeConnections$.do(createLog('Native client connected')),
+      mergeCompilerEventWithConnection,
+    )
+    .withLatestFrom(
+      haulConnections$.do(createLog('Haul client connected')),
+      mergeCompilerEventWithConnection,
+    )
+    .map(event => ({ ...event, socket: event[event.target] }))
+    .skipWhile(({ socket }) => socket.readyState !== socket.OPEN)
+    .subscribe(
+      event => {
+        const { target, body } = event;
+        const socket = event[target];
+
+        logger.log(
+          `Sending message ${body.action || body.type} to ${target} client`,
+        );
+
+        socket.send(JSON.stringify(body), error => {
+          if (error) {
+            logger.log(
+              `Sending message ${body.action ||
+                body.type} to ${target} client failed`,
+              error,
+            );
+            socket.close();
+          }
+        });
+      },
+      error => {
+        logger.log('Fatal error', error);
+      },
+    );
+}
+
+function createConnectionStream(wsProxy: WebSocketProxy, id: string) {
+  return Observable.create((observer: *) => {
+    wsProxy.onConnection((socket: WebSocket) => {
+      observer.next({ id, socket });
+    });
   });
 }
 
-function setConnection(
-  socketProxy: WebSocketProxy,
-  name: string,
-  connection: Connection,
-  logger: Logger,
+function createCompilerEventStream(compiler: Compiler) {
+  return Observable.create((observer: *) => {
+    compiler.plugin('compile', () => {
+      observer.next({ target: 'native', body: { type: 'update-start' } });
+      observer.next({ target: 'haul', body: { action: 'building' } });
+    });
+
+    compiler.plugin('done', (stats: Object) => {
+      observer.next({ target: 'native', body: { type: 'update-done' } });
+      getStatsPayload(stats).forEach(payload => {
+        observer.next({
+          target: 'haul',
+          body: { action: 'built', ...payload },
+        });
+      });
+    });
+  });
+}
+
+function mergeCompilerEventWithConnection(
+  base: Object,
+  connection: { id: string, socket: WebSocket },
 ) {
-  socketProxy.onConnection((socket: WebSocket) => {
-    logger.log(`Got ${name} connection`);
-    // eslint-disable-next-line no-param-reassign
-    connection.isOpen = true;
-    // eslint-disable-next-line no-param-reassign
-    connection.socket = socket;
-
-    socket.on('open', () => {
-      // eslint-disable-next-line no-param-reassign
-      connection.isOpen = true;
-    });
-
-    socket.on('close', () => {
-      // eslint-disable-next-line no-param-reassign
-      connection.socket = null;
-      // eslint-disable-next-line no-param-reassign
-      connection.isOpen = false;
-    });
-  });
-}
-
-function createConnection(
-  nativeProxy: WebSocketProxy,
-  haulProxy: WebSocketProxy,
-  logger: Logger,
-): ClientConnection {
-  const nativeHotConnection: Connection = {
-    socket: null,
-    isOpen: false,
-  };
-
-  const haulHmrConnection: Connection = {
-    socket: null,
-    isOpen: false,
-  };
-
-  setConnection(nativeProxy, 'Native Hot', nativeHotConnection, logger);
-  setConnection(haulProxy, 'Haul HMR', haulHmrConnection, logger);
-
   return {
-    publishNativeEvent(action: string) {
-      if (nativeHotConnection.isOpen && nativeHotConnection.socket) {
-        nativeHotConnection.socket.send(JSON.stringify({ type: action }));
-      }
-    },
-    publish(payload: any) {
-      if (
-        haulHmrConnection.isOpen &&
-        haulHmrConnection.socket &&
-        nativeHotConnection.isOpen
-      ) {
-        haulHmrConnection.socket.send(JSON.stringify(payload));
-      }
-    },
+    ...base,
+    [connection.id]: connection.socket,
   };
 }
 
-function publishStats(
-  action: string,
-  stats: Object,
-  connection: ClientConnection,
-  logger: Logger,
-) {
+function getStatsPayload(stats: Object) {
   // For multi-compiler, stats will be an object with a 'children' array of stats
   const bundles = extractBundles(stats.toJson({ errorDetails: false }));
-  bundles.forEach(bundleStats => {
-    logger.log(
-      `webpack built ${bundleStats.name ? `${bundleStats.name} ` : ''}` +
-        `${bundleStats.hash} in ${bundleStats.time}ms`,
-    );
-
-    connection.publish({
+  return bundles.map(bundleStats => {
+    return {
       name: bundleStats.name,
-      action,
       time: bundleStats.time,
       hash: bundleStats.hash,
       warnings: bundleStats.warnings || [],
       errors: bundleStats.errors || [],
       modules: buildModuleMap(bundleStats.modules),
-    });
+    };
   });
 }
 
