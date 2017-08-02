@@ -15,7 +15,11 @@
 
 onmessage = (() => {
   let visibilityState;
-  const showVisibilityWarning = (() => {
+
+  const messageQueue = [];
+  let shouldQueueMessages = false;
+
+  const showVisibilityWarning = (function() {
     let hasWarned = false;
     return () => {
       // Wait until `YellowBox` gets initialized before displaying the warning.
@@ -30,22 +34,13 @@ onmessage = (() => {
     };
   })();
 
-  let shouldQueueIncomingMessages = false;
-  const messageQueue = [];
-
-  // Flush enqueued message handlers and execute them
-  function flushMessageQueue() {
+  const processEnqueuedMessages = function() {
     while (messageQueue.length) {
-      const processMessage = messageQueue.shift();
-      processMessage();
+      const messageProcess = messageQueue.shift();
+      messageProcess();
     }
-
-    if (messageQueue.length) {
-      flushMessageQueue();
-    } else {
-      shouldQueueIncomingMessages = false;
-    }
-  }
+    shouldQueueMessages = false;
+  };
 
   const messageHandlers = {
     executeApplicationScript(message, sendReply) {
@@ -57,21 +52,19 @@ onmessage = (() => {
         self[key] = JSON.parse(message.inject[key]);
       }
 
-      fetch(message.url).then(resp => resp.text()).then(js => {
-        let errorMessage;
+      shouldQueueMessages = true;
+
+      function evalJS(js) {
         try {
-          (new Function(js))();
-        } catch (error) {
-          errorMessage = error.message;
-          if (self.ErrorUtils) {
-            self.ErrorUtils.reportFatalError(error);
-          } else {
-            console.error(error);
-          }
+          eval(
+            js
+              .replace(/this\["webpackHotUpdate"\]/g, 'self["webpackHotUpdate"]')
+          );
+        } catch (e) {
+          self.ErrorUtils.reportFatalError(e);
         } finally {
-          sendReply(null, errorMessage);
-          // Flush the queue
-          flushMessageQueue();
+          self.postMessage({ replyID: message.id });
+          processEnqueuedMessages();
         }
       });
     },
@@ -81,8 +74,7 @@ onmessage = (() => {
   };
 
   return function(message) {
-    // Create message prcoessing function
-    const processMessage = () => {
+    const processMessage = function() {
       if (visibilityState === 'hidden') {
         showVisibilityWarning();
       }
@@ -98,24 +90,24 @@ onmessage = (() => {
       // Special cased handlers
       if (handler) {
         handler(obj, sendReply);
-      } else {
-        let returnValue = [[], [], [], 0];
-        let error;
-        try {
-          if (typeof __fbBatchedBridge === 'object' && __fbBatchedBridge[obj.method]) {
-            returnValue = __fbBatchedBridge[obj.method].apply(null, obj.arguments);
-          } else {
-            error = 'Failed to call function, __fbBatchedBridge is undefined';
-          }
-        } catch (err) {
-          error = err.message;
-        } finally {
-          sendReply(JSON.stringify(returnValue), error);
+        return;
+      }
+
+      // Other methods get called on the bridge
+      let returnValue = [[], [], [], 0];
+      try {
+        if (typeof __fbBatchedBridge === 'object') {
+          returnValue = __fbBatchedBridge[obj.method].apply(
+            null,
+            obj.arguments,
+          );
         }
+      } finally {
+        sendReply(JSON.stringify(returnValue));
       }
     };
 
-    if (shouldQueueIncomingMessages) {
+    if (shouldQueueMessages) {
       messageQueue.push(processMessage);
     } else {
       processMessage();
