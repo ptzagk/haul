@@ -63,13 +63,13 @@ function applyHmrTweaks(
   state
 ) {
   if (
-    !programPath.body.find(
+    !programPath.node.body.find(
       bodyNode =>
         t.isImportDeclaration(bodyNode) &&
         bodyNode.source.value === 'haul/hot/path'
     )
   ) {
-    programPath.body.unshift(t.importDeclaration([], t.stringLiteral('haul/hot/patch')));
+    programPath.node.body.unshift(t.importDeclaration([], t.stringLiteral('haul/hot/patch')));
   }
 
   const specifiers = [
