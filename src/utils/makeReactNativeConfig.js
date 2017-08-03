@@ -191,12 +191,6 @@ const getDefaultConfig = ({
         : [],
     ),
   resolve: {
-    alias: {
-      /**
-       * Resolve path to HMR module
-       */
-      'haul-hmr': require.resolve('../HMR/client/index.js'),
-    },
     plugins: [
       /**
        * React Native uses a module system called Haste

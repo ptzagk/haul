@@ -64,16 +64,10 @@ function createServer(
     webSocketProxy(webSocketServer, '/debugger-proxy'),
   );
 
-  hotMiddleware(
-    compiler,
-    {
-      nativeProxy: webSocketProxy(webSocketServer, '/hot'),
-      haulProxy: webSocketProxy(webSocketServer, '/haul-hmr'),
-    },
-    {
-      debug: true,
-    },
-  );
+  hotMiddleware(compiler, {
+    nativeProxy: webSocketProxy(webSocketServer, '/hot'),
+    haulProxy: webSocketProxy(webSocketServer, '/haul-hmr'),
+  });
 
   // Middlewares
   appHandler

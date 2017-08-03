@@ -25,14 +25,14 @@ module.exports = function getBabelConfig(cwd: string) {
 
   return Object.assign({}, babelrc, {
     babelrc: false,
-    plugins: [
-      require.resolve('./fixRequireIssues'),
-      require.resolve('react-hot-loader/babel'),
-    ]
+    plugins: [require.resolve('./fixRequireIssues')]
       .concat(
         process.env.NODE_ENV === 'production'
           ? []
-          : [require.resolve('../HMR/babelPlugin')],
+          : [
+              require.resolve('react-hot-loader/babel'),
+              require.resolve('../HMR/babelPlugin'),
+            ],
       )
       .concat(babelrc.plugins || []),
   });

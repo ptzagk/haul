@@ -66,7 +66,7 @@ onmessage = (() => {
 
       fetch(message.url).then(resp => resp.text()).then(evalJS.bind({}));
     },
-    setDebuggerVisibility(message, sendReply) {
+    setDebuggerVisibility(message) {
       visibilityState = message.visibilityState;
     },
   };
