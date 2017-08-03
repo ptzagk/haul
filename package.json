@@ -23,7 +23,8 @@
   "license": "MIT",
   "bugs": "https://github.com/callstack-io/haul/issues",
   "peerDependencies": {
-    "react": ">=16.0.0-alpha.0"
+    "react": ">=16.0.0-alpha.0",
+    "babel-preset-react-native": "^2.0.0"
   },
   "dependencies": {
     "babel-core": "^6.24.0",
@@ -73,9 +74,6 @@
     "husky": "^0.13.3",
     "jest": "^19.0.2",
     "lint-staged": "^3.4.0",
-    "babel-preset-react-native": "^2.0.0"
-  },
-  "peerDependencies": {
     "babel-preset-react-native": "^2.0.0"
   },
   "lint-staged": {
