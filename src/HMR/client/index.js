@@ -28,6 +28,5 @@ if (!module.hot || process.env.NODE_ENV === 'production') {
     path: `${process.env.DEV_SERVER_ORIGIN || ''}/haul-hmr`,
     overlay: false,
   });
-  require('./patch');
   module.exports = require('./hotApi');
 }

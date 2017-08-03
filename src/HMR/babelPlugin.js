@@ -62,7 +62,16 @@ function applyHmrTweaks(
   hmrImportPath,
   state
 ) {
-  // Convert to named import: import 'haul-hmr' -> import haulHMR from 'haul-hmr'
+  if (
+    !programPath.body.find(
+      bodyNode =>
+        t.isImportDeclaration(bodyNode) &&
+        bodyNode.source.value === 'haul/hot/path'
+    )
+  ) {
+    programPath.body.unshift(t.importDeclaration([], t.stringLiteral('haul/hot/patch')));
+  }
+
   const specifiers = [
     t.importSpecifier(t.identifier(MAKE_HOT_NAME), t.identifier(MAKE_HOT_NAME)),
     t.importSpecifier(t.identifier(REDRAW_NAME), t.identifier(REDRAW_NAME)),
@@ -150,7 +159,7 @@ module.exports = babel => {
         path.traverse({
           ImportDeclaration(importPath) {
             if (
-              importPath.node.source.value === 'haul-hmr' &&
+              importPath.node.source.value === 'haul/hot' &&
               !importPath.node.specifiers.length
             ) {
               applyHmrTweaks(babel, path, importPath, state);

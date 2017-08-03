@@ -44,10 +44,6 @@ onmessage = (() => {
 
   const messageHandlers = {
     executeApplicationScript(message, sendReply) {
-      // Enqueue next messages, since they need to be process after `executeApplicationScript`
-      // sends a response
-      shouldQueueIncomingMessages = true;
-
       for (const key in message.inject) {
         self[key] = JSON.parse(message.inject[key]);
       }
