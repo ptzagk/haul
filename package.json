@@ -22,6 +22,9 @@
   ],
   "license": "MIT",
   "bugs": "https://github.com/callstack-io/haul/issues",
+  "peerDependencies": {
+    "react": ">=16.0.0-alpha.0"
+  },
   "dependencies": {
     "babel-core": "^6.24.0",
     "babel-loader": "^6.4.1",
