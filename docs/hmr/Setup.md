@@ -1,9 +1,9 @@
 # Hot Module Replacement setup
-Jump to: [Automatic setup](#autoamtic-setup) | [Manual setup](#manual-setup)
+> Jump to: [Automatic setup](#automatic-setup) | [Manual setup](#manual-setup)
 
-For smaller project, we provider automatic option for setting up Hot Module Replacement. If your project satisfy the following criteria, you're good to go to use automatic setup:
+For smaller project, we provide automatic option for setting up Hot Module Replacement. If your project meets the following criteria, you can use our on-line setup for HMR:
 
-* Signle root component exported from the root file with `default` keyword (`export default`)
+* Single root component exported from the root file with `default` keyword (`export default`)
 * Single `AppRegistry.registerComponent` call
 * Root component and `AppRegistry.registerComponent` call are in the same file
 
@@ -25,27 +25,27 @@ export default class MyProject extends Component {
 AppRegistry.registerComponent('MyProject', () => MyProject);
 ```
 
-All **default** `index.ios.js` and `index.android.js` files created by `react-native init` are fine for automatic setup.
+All **default** `index.ios.js` and `index.android.js` files created by `react-native init` work with the automatic setup out of the box.
 
 ## Automatic setup
 
 In order to enable HMR add `import 'haul/hot';` at the top of the root file - usually `index.ios.js` or `index.android.js`. Then, from within _Developer menu_ tap _Enable Hot Reloading_.
 
 ## Manual setup
-Navigate to: [API docs](./API.md)
+> Navigate to: [API docs](./API.md)
 
-Jump to: [Examples](#examples)
+> Jump to: [Examples](#examples)
 
-For advanced project or the ones with different structure, we provide hot API, which allows you to enable HMR regardless of which navigation library you use and how you structure yor code.
+For advanced projects or the ones with different structure, we provide our own HMR API, which allows you to enable HMR regardless of which navigation library you use and how you structure your code.
 
-This guide is ___ of any naviagtion library, so if you're using one of the following, please refere to associated guide:
+This guide below is not a list of setps, but rather a set of rules and tips on how to setup HMR, since we don't know how your project looks like. However, if you're using one of the following naviagion libraries, please refer to associated guide:
 
 * [`react-native-naviagion`](./guides/react-native-navigation.md)
 
 ------
 
-Haul uses `react-hot-loader` to support HMR, so the first step is to _patch_ React's `createElement` and `createFactory` functions to use proxied. Proxied component can be updated with a new implementation but it's state is presisted.
-In order to do that, add the following line to the root file - the one that is used as an entrypoint, before any other code:
+Haul uses `react-hot-loader` to support HMR, so the first step is to _patch_ React's `createElement` and `createFactory` functions to use `react-proxy`. Proxied component can be updated with a new implementation but it's state is presisted between updates.
+In order to do that, add the following line to __the root file__ - the one that is used as an entrypoint, before any other code:
 
 ```javascript
 import 'haul/hot/patch';
@@ -53,19 +53,7 @@ import 'haul/hot/patch';
 
 It's important that __the code from `haul/hot/patch` is evaluated before anything else!__
 
-All of the functions used below can be imported with:
-
-```javascript
-import {
-  makeHot,
-  tryUpdateSelf,
-  callOnce,
-  clearCacheFor,
-  redraw
-} from 'haul/hot';
-```
-
-Now, we need to wrap root component factories using `makeHot` function. Root component factory is a function that returns a root component:
+Now, we need to wrap the __root component factories__ using `makeHot` function. Root component factory is a function that returns a __root component__:
 
 ```javascript
 () => RootComponent
@@ -87,7 +75,7 @@ AppRegistry.registerComponent('MyApp', makeHot(() => MyApp));
 Navigation.registerComponent('MyScreen', makeHot(() => MyScreen));
 ```
 
-If your app has multiple root components (usually they're treated as screens), you need to pass second argument to `makeHot` call, which is a `id` of the component factory. It will be used later to tell which component needs to be redrawn:
+If your app has __multiple root components__ (usually they're treated as screens), you need to pass the second argument to `makeHot` call, which is a `id` of the component factory. It will be used later to tell which component needs to be redrawn:
 
 ```javascript
 Navigation.registerComponent('MyScreen1', makeHot(() => MyScreen1, 'MyScreen1'));
@@ -95,7 +83,19 @@ Navigation.registerComponent('MyScreen2', makeHot(() => MyScreen2, 'MyScreen2'))
 Navigation.registerComponent('MyScreen3', makeHot(() => MyScreen3, 'MyScreen3'));
 ```
 
-Next step is optional, and __can be applied only if you have a single root component__ and `registerComponent` call in same file. In that case, when the file will be re-evaluated upon hot update, the app won't be refreshed unless you add
+All of the functions we use in this guide can be imported from `haul/hot`:
+
+```javascript
+import {
+  makeHot,
+  tryUpdateSelf,
+  callOnce,
+  clearCacheFor,
+  redraw
+} from 'haul/hot';
+```
+
+Next step is optional and __can be applied only if you have a single root component__ and `registerComponent` call in same file. In that case, when the file will be re-evaluated upon hot update, the app won't be refreshed unless you add
 
 ```javascript
 tryUpdateSelf();
@@ -117,15 +117,15 @@ The last thing is to acually tell the Webpack which modules we want to accept an
 ```javascript
 if (module.hot) {
   module.hot.accept(() => {})
-  module.hot.accept('path/to/module/or/children', () => {
-    clearCacheFor(require.resolve('path/to/module'));
-    redraw(() => require('path/to/module').default);
+  module.hot.accept('', () => {
+    clearCacheFor(require.resolve(''));
+    redraw(() => require('').default);
   });
 }
 ```
 
-Now, you need to replace the path according to the following rules:
-* If you have a single root component, `module.hot.accept` first argument should be an array of paths to children components and the rest of the paths should be to itself:
+Now, you need to replace empty strings with the paths according to the following rules:
+* If you have a __single root component__, `module.hot.accept` first argument should be an array of paths to children components and the rest of the paths should be to __itself__:
   ```javascript
   // file: index.js
   import Child1 from './Child1';
@@ -145,7 +145,7 @@ Now, you need to replace the path according to the following rules:
     });
   }
   ```
-* If you have a multi root component, all of the paths should be to the root component and each of the root components should have a separate `module.hot.accept` call:
+* If you have a __multi root component__, all of the paths should point to the root component and each of the root components should have a separate `module.hot.accept` call:
   ```javascript
   // file: index.js
   import Root1 from './Root1';
@@ -245,7 +245,8 @@ import Navigation from 'some-naviagtion-lib';
 import Calendar from './Calendar';
 import Location from './Location';
 
-Navigation.registerComponent('Calendar', makeHot(() => Calendar, 'Calendar'));Navigation.registerComponent('Location', makeHot(() => Location, 'Location'));
+Navigation.registerComponent('Calendar', makeHot(() => Calendar, 'Calendar'));
+Navigation.registerComponent('Location', makeHot(() => Location, 'Location'));
 
 if (module.hot) {
   module.hot.accept('./Calendar', () => {

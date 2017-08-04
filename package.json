@@ -24,6 +24,7 @@
   "bugs": "https://github.com/callstack-io/haul/issues",
   "peerDependencies": {
     "react": ">=16.0.0-alpha.0",
+    "react-native": "*",
     "babel-preset-react-native": "^2.0.0"
   },
   "dependencies": {
