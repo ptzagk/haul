@@ -47,8 +47,6 @@ import Calendar from './Calendar';
 import Localization from './Localization';
 import Information from './Information';
 
-
-
 Navigation.registerComponent('Calendar', () => Calendar);
 Navigation.registerComponent('Localization', () => Localization);
 Navigation.registerComponent('Information',() => Information);
